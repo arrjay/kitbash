@@ -46,21 +46,23 @@ function system.debian.repo.custom() {
   _gpg_key_path=/usr/share/keyrings/${_repo_name}-archive-keyring.gpg
   _repo_path=/etc/apt/sources.list.d/${_repo_name}.list
   
-  if [[ "$distribution " == " " ]]; then
+  if [[ -z "$distribution" ]]; then
     distribution=$(lsb_release -cs)
   fi
-  if [[ "$arch " == " " ]]; then
+  if [[ -z "$arch" ]]; then
     arch=$(dpkg --print-architecture)
   fi
   
   # Generate what we expect the contents to look like
+  # This does not support deb822 format as that is not commonly available at
+  #   time of writing (8 Jun 2025)
   _contents="deb [arch=${arch} signed-by=${_gpg_key_path}] ${url} ${distribution} ${channel}"
   
   # If the key is an http link, fetch it first
   if echo $key | grep -q "http[s]*://"; then
     __babashka_log "${__funcname}: Fetching remote GPG key"
-    /usr/bin/curl -fsSL $key | $__babashka_sudo gpg --dearmor --yes -o $HOME/${_repo_name}-archive-keyring.gpg
-    _keyfile=$HOME/${_repo_name}-archive-keyring.gpg
+    /usr/bin/curl -fsSL $key | $__babashka_sudo gpg --dearmor --yes -o "${HOME}/${_repo_name}"-archive-keyring.gpg
+    _keyfile="$HOME/${_repo_name}"-archive-keyring.gpg
   else
     _keyfile=$key
   fi
@@ -74,14 +76,14 @@ function system.debian.repo.custom() {
     
     __babashka_log "key path: $_gpg_key_path"
     __babashka_log "repo path: $_repo_path"
-    if ! [[ -e $_gpg_key_path ]] && \
-      ! [[ -e $_repo_path ]]; then
+    if ! [[ -e "$_gpg_key_path" ]] && \
+      ! [[ -e "$_repo_path" ]]; then
       # TODO:
       # This isn't good enough. Fix this.
       return 1;
     fi
-    $__babashka_sudo diff $_gpg_key_path $_keyfile 2>&1 > /dev/null || return 1
-    echo "$_contents" | $__babashka_sudo diff $_repo_path - 2>&1 > /dev/null || return 1
+    $__babashka_sudo diff "$_gpg_key_path" "$_keyfile" 2>&1 > /dev/null || return 1
+    echo "$_contents" | $__babashka_sudo diff "$_repo_path" - 2>&1 > /dev/null || return 1
     # return 0; 
   }
   function meet() {

@@ -1,78 +1,52 @@
-# does this create a function? is that how this works? How does this even work?
+# Common functions
 
-user.get_uid() {
-  _user=$1; shift
-
-  if [[ $_user != "" ]]; then
-    case $_user in
-      *[!0-9]*)
-        # Is a string, so we need to check if the group even exists
-        # And if it doesn't, that's, well, bad? Yes, that's bad.
-        _uid=$(getent passwd $_user | awk -F ':' '{print $3}')
-        ;;
-      *)
-        # is a number
-        # We can pass it on directly
-        _uid=$_user
-        ;;
-    esac
-    echo $_uid
-  else
-    # If it's blank then we can't do anything useful
-    return -1
-  fi
-}
-
-group.get_gid() {
-  _group_name=$1; shift
-  if [[ $_group_name != "" ]]; then
-    case $_group_name in
-      *[!0-9]*)
-        # Is a string, so we need to check if the group even exists
-        # And if it doesn't, that's, well, bad? Yes, that's bad.
-        _gid=$(getent group $_group_name | awk -F ':' '{print $3}')
-        ;;
-      *)
-        # is a number
-        # We can pass it on directly
-        _gid=$gid
-        ;;
-    esac
-    echo $_gid
-  else
-    return -1
-  fi
-}
+# Switch based on which `stat` we're using.
+# Non-Linux systems probably won't have GNU `stat` by default.
+stat_flag=""
+stat_mode_format=""
+if stat --version &>/dev/null; then
+  # GNU stat
+  stat_flag="-c"
+  stat_mode_format='%a'
+else
+  # BSD/macOS
+  stat_flag="-f"
+  stat_mode_format='%Lp'
+fi
 
 path.has_uid() {
-  _path=$1; shift
-  _uid=$1; shift
-  _owner=$(user.get_uid $_uid)
+  local _path="$1"
+  local _uid="$2"
   # UID could be either a username _or_ a UID
   # So we should resolve that
-  if [[ $_owner != "" ]] && [[ `stat -c '%u' ${_path}` != $_owner ]]; then
-    return 1
-  fi
-  return 0
+  local _owner=$(user.get_uid "$_uid") || return 1
+  # and now, check if it matches
+  local value=$(stat "$stat_flag" '%u' "${_path}") || return 1
+  [[ "$value" == "$_owner" ]]
 }
 
 path.has_gid() {
-  _path=$1; shift
-  _gid=$1; shift
-  _group=$(group.get_gid $_gid)
-  if [[ $_group != "" ]] && [[ `stat -c '%g' ${_path}` != $_group ]]; then
-    return 1
-  fi
-  return 0
+  local _path="$1"
+  local _gid="$2"
+  local _group=$(group.get_gid "$_gid") || return 1
+  local value=$(stat "$stat_flag" '%g' "${_path}") || return 1
+  [[ "$value" == "$_group" ]]
 }
 
 path.has_mode() {
-  _path=$1; shift
-  _mode=$1; shift
-  if [[ ${_mode:0:1} == "0" ]]; then
+  local _path="$1"
+  local _mode="$2"
+  if [[ "${_mode:0:1}" == "0" ]]; then
     # Strip the leading 0, as it's implied
     _mode="${_mode:1}"
   fi
-  [[ `stat -c '%a' ${_path}` != $_mode ]] && return 1
-  return 0
+  value=$(stat "$stat_flag" "$stat_mode_format" "${_path}") || return 1
+  [[ "$value" == "$_mode" ]]
 }
+
+# OS-specific functions for get_uid and get_gid, to verify the existence of
+# groups and users.
+
+local ABSOLUTE_PATH="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+system::info::id "macos" && . "$ABSOLUTE_PATH"/system/macos.sh && return
+system::info::test "KERNEL" "linux" && . "$ABSOLUTE_PATH"/system/linux.sh && return

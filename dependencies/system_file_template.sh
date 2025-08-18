@@ -39,17 +39,17 @@ system.file.template() {
   if ! [[ -e /usr/bin/mo ]]; then
     __babashka_fail "${FUNCNAME[0]}: template renderer mo not installed."
   fi
-  if [[ $_template == "" ]]; then
+  if [[ -z "$_template" ]]; then
     __babashka_fail "${FUNCNAME[0]}: template path must be set with -t."
   fi
-  if ! [[ -e $_template ]]; then
+  if ! [[ -e "$_template" ]]; then
     __babashka_fail "${FUNCNAME[0]}: template $_template does not exist."
     exit -1
   fi
   
   local _variables=""
   for var in "${_vararray[@]}"; do 
-    if ! [[ -e $var ]]; then
+    if ! [[ -e "$var" ]]; then
       __babashka_fail "${FUNCNAME[0]}: variable source file $var does not exist."
     fi
     _variables="${_variables} -s=$var";
@@ -70,16 +70,16 @@ system.file.template() {
   
   function is_met() {
     # Basic existence and mode settings
-    ! [[ -e $_file_name ]] && return 1
+    ! [[ -e "$_file_name" ]] && return 1
 
-    if [[ $_group != "" ]]; then
-      path.has_gid $_file_name $_group || return 1
+    if [[ -n "$_group" ]]; then
+      path.has_gid "$_file_name" "$_group" || return 1
     fi
-    if [[ $_owner != "" ]]; then
-      path.has_uid $_file_name $_owner || return 1
+    if [[ -n "$_owner" ]]; then
+      path.has_uid "$_file_name" "$_owner" || return 1
     fi
-    if [[ $_mode != "" ]]; then
-      path.has_mode $_file_name $_mode || return 1
+    if [[ -n "$_mode" ]]; then
+      path.has_mode "$_file_name" "$_mode" || return 1
     fi
     # Ensure the contents are what we expect them to be
     # Since this is using a templating engine, we have to render out the
@@ -94,16 +94,16 @@ system.file.template() {
     # -x: fail when functions return nonzero status codes
     # -f: fail if files don't exist
 
-    /usr/bin/mo -u -x --fail-on-file --allow-function-arguments ${__helpers} ${_variables} $_template | $__babashka_sudo diff $_file_name -
+    /usr/bin/mo -u -x --fail-on-file --allow-function-arguments "${__helpers}" "${_variables}" "$_template" | $__babashka_sudo diff "$_file_name" -
   }
   function meet() {
 
     # Overwrite the file
-    /usr/bin/mo -u -x --fail-on-file --allow-function-arguments ${__helpers} ${_variables} $_template | $__babashka_sudo tee $_file_name
+    /usr/bin/mo -u -x --fail-on-file --allow-function-arguments "${__helpers}" "${_variables}" "$_template" | $__babashka_sudo tee "$_file_name"
     # Change these settings, if needed
-    [[ $_mode != "" ]] && $__babashka_sudo chmod $_mode $_file_name
-    [[ $_owner != "" ]] && $__babashka_sudo chown $_owner $_file_name
-    [[ $_group != "" ]] && $__babashka_sudo chgrp $_group $_file_name
+    [[ -n "$_mode" ]] && $__babashka_sudo chmod "$_mode" "$_file_name"
+    [[ -n "$_owner" ]] && $__babashka_sudo chown "$_owner" "$_file_name"
+    [[ -n "$_group" ]] && $__babashka_sudo chgrp "$_group" "$_file_name"
   }
   process "${FUNCNAME[0]}" "$_file_name"
 }

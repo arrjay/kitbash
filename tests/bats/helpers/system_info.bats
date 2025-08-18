@@ -7,10 +7,10 @@ setup() {
   DIR="$( cd "$( dirname "$BATS_TEST_FILENAME" )" >/dev/null 2>&1 && pwd )"
   
   # Load Babashka itself
-  . "${DIR}/../../../bin/babashka"
+  # . "${DIR}/../../../bin/babashka"
   # load the bats helpers
-  . "${DIR}/../../../helpers/core.sh"
-  . "${DIR}/../../../helpers/system_info.sh"
+  . "${DIR}/../../../helpers/01-core.sh"
+  . "${DIR}/../../../helpers/02-system_info.sh"
 }
 
 # setup() {

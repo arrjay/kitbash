@@ -3,14 +3,14 @@ load "../../bats_helpers/bats-assert/load"
 
 setup_file() {
   DIR="$( cd "$( dirname "$BATS_TEST_FILENAME" )" >/dev/null 2>&1 && pwd )"
-  load "${DIR}/../../../bin/babashka"
+  # load "${DIR}/../../../bin/babashka"
   # load the babashka core functions
-  . "${DIR}/../../../helpers/core.sh"
+  . "${DIR}/../../../helpers/01-core.sh"
 }
 
 setup() {
   DIR="$( cd "$( dirname "$BATS_TEST_FILENAME" )" >/dev/null 2>&1 && pwd )"
-  . "${DIR}/../../../helpers/core.sh"
+  . "${DIR}/../../../helpers/01-core.sh"
 }
 
 @test "element_in_array detects element" {

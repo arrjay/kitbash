@@ -47,7 +47,7 @@ bb::core::casefold() {
   #   management too, right?
   # Finally, fall into the basic C locale if we can't find a UTF-8 locale to
   #   use.
-  for loc in C.UTF-8 en_US.UTF-8 UTF-8 C; do
+  for loc in C.UTF-8 C.utf8 en_US.utf8 en_US.UTF-8 UTF-8 C; do
     if locale -a 2>/dev/null | grep -qi "^${loc}$"; then
       locale="$loc"
       break
