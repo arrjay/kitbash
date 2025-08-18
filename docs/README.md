@@ -33,7 +33,7 @@ Returns true if the path matches the GID given.
 path.has_mode /path mode
 ```
 
-Returns true of the path has the given mode.
+Returns true if the path has the given mode.
 
 
 ### Built-ins

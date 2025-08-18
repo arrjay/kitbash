@@ -1,3 +1,9 @@
+# v0.0.4
+- Adds helpers
+- Cleanup of code
+- Adds system information features (documentation pending)
+- Adds initial `bats` tests.
+
 # v0.0.3
 
 - Adds additional search paths for dependencies
