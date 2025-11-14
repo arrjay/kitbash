@@ -1,0 +1,9 @@
+{
+  "name": "example",
+  "description": "Example Description",
+  "version": "1.0.0",
+  "inherits": [
+    "inherited"
+  ],
+  "entrypoint": "model.example.apply"
+}

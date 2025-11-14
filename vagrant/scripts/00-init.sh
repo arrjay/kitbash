@@ -16,14 +16,14 @@ sudo rm -f /etc/apt/apt.conf.d/70debconf
 
 # sudo dpkg-preconfigure -f noninteractive -p critical
 
-DEBIAN_FRONTEND=noninteractive sudo apt-get -qq -y clean > /dev/null
+DEBIAN_FRONTEND=noninteractive sudo apt-get -qq -y clean > /dev/null 2>&1
 echo "Doing initial apt-get updates"
-DEBIAN_FRONTEND=noninteractive sudo apt-get -qq -y update > /dev/null
+DEBIAN_FRONTEND=noninteractive sudo apt-get -qq -y update > /dev/null 2>&1
 # DEBIAN_FRONTEND=noninteractive sudo apt-get -qq -y install apt-utils > /dev/null
 echo "Attempting upgrade..."
-DEBIAN_FRONTEND=noninteractive sudo apt-get -qq -y upgrade > /dev/null
+DEBIAN_FRONTEND=noninteractive sudo apt-get -qq -y dist-upgrade > /dev/null 2>&1
 # DEBIAN_FRONTEND=noninteractive sudo apt-get -qq -y install net-tools  > /dev/null
-DEBIAN_FRONTEND=noninteractive sudo apt-get -qq -y autoremove > /dev/null
+DEBIAN_FRONTEND=noninteractive sudo apt-get -qq -y autoremove > /dev/null 2>&1
 
 echo "Installing git and gpg"
-DEBIAN_FRONTEND=noninteractive sudo apt-get -qq -y install git gpg > /dev/null
+DEBIAN_FRONTEND=noninteractive sudo apt-get -qq -y install git gpg > /dev/null 2>&1

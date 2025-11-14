@@ -1,0 +1,9 @@
+{
+  "name": "inherited",
+  "description": "Inherited model",
+  "version": "1.0.0",
+  "kits": [
+    "postgres"
+  ],
+  "entrypoint": "model.inherited.apply"
+}

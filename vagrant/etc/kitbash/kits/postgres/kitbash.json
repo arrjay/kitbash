@@ -1,0 +1,11 @@
+{
+  "name": "postgres",
+  "description": "PostgreSQL Debian-alike module for Kitbash.",
+  "version": "1.0.0",
+  "depends": [
+    "pgdg"
+  ],
+  "variables": [
+    "POSTGRESQL_VERSION"
+  ]
+}
