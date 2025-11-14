@@ -74,6 +74,7 @@ __KITBASH_CURRENT_INDENT=0
 declare -Ag __KITBASH_KIT_SEEN
 declare -ag __KITBASH_KIT_TREE_STACK
 declare -ag __KITBASH_MODEL_TREE_STACK
+declare -a  __KITBASH_EXEC
 
 
 declare -A __KITBASH_ENSURED
@@ -342,8 +343,6 @@ __kitbash_parse_json() {
   #   "POSTGRESQL_VERSION"
   # ]
   local path
-  local toml_keys
-  toml_keys=()
   
   path="$1"
   if ! [[ -f "$path" ]]; then
@@ -395,7 +394,6 @@ __kitbash_parse_json() {
     log.debug "Setting ${name}__${key}"
     
     log.debug "Set as ${PARSED_JSON["${name}__${key}"]}"
-    # toml_keys+=( ${key:2:"${#key}"} )
   done
 }
 
@@ -472,7 +470,7 @@ __kitbash_load_models() {
 
 __kitbash_load_model() {
   
-  local toml_keys key name
+  local key name
   
   local _path model_path
   local model
@@ -570,16 +568,16 @@ kitbash.apply_kits() {
   # First, validate all the kits, before we try to run anything
   local -A kit_functions
   log.debug "Applying kits"
-  log.debug "$( types.array.reverse KITBASH_ORDERED_KITS )"
+  # log.debug "$( types.array.reverse KITBASH_ORDERED_KITS )"
   for kit in $( types.array.reverse KITBASH_ORDERED_KITS ); do
     if [[ -v KITBASH_KITS["${kit}__entrypoint"] ]]; then
-      if ! declare -F "${KITBASH_KITS["${kit}__entrypoint"]}"; then
+      if ! declare -F "${KITBASH_KITS["${kit}__entrypoint"]}" > /dev/null 2>&1; then
         kitbash.fail "${KITBASH_KITS["${kit}__entrypoint"]} declared but not defined."
       fi
       kit_functions+=( ["$kit"]="${KITBASH_KITS["${kit}__entrypoint"]}" )
     else
       # Use the default
-      if ! declare -F "kit.$kit.apply"; then
+      if ! declare -F "kit.$kit.apply" > /dev/null 2>&1; then
         kitbash.fail "Default entrypoint kit.$kit.apply not defined"
       fi
       kit_functions+=( ["$kit"]="kit.$kit.apply" )
@@ -608,7 +606,9 @@ kitbash.apply() {
   # required to run them directly.
   __incr
   kitbash.apply_inherited "$model" || kitbash.fail "Failed to apply inherited models."
-  kitbash.apply_kits || kitbash.fail "Failed to apply kits."
+  # Reset the model
+  KITBASH_CURRENT_MODEL="$model"
+  # kitbash.apply_kits || kitbash.fail "Failed to apply kits."
   __decr
   
   log.debug "Attempting to invoke ${KITBASH_MODELS["${model}__entrypoint"]}"
@@ -658,6 +658,7 @@ __babashka_find_deps_from_path() {
 
 # so we can log before the main logging system gets initialized
 log.debug() {
+  [[ "$KITBASH_LOG_LEVEL" -le "0" ]] && return
   echo "$1" >&2
 }
 
@@ -686,8 +687,10 @@ __babashka_main() {
           # TODO
           # Support more than one model being applied
           model="$2"
-          log.debug "Applying model '$model'"
           __kitbash_load_model "$model"
+          log.debug "Applying all kits"
+          kitbash.apply_kits || kitbash.fail "Failed to apply kits."
+          log.debug "Applying model '$model'"
           kitbash.apply "$model"
         ;;
         kits)
