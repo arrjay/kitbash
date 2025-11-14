@@ -107,9 +107,9 @@ teardown() {
   declare -a XOR=( "greeting,departure" )
   
   assert std.argparser greeting "bonjour"
-  assert_equal $options["greeting"] "bonjour"
+  assert_equal "${options["greeting"]}" "bonjour"
   assert std.argparser departure "au revoir"
-  assert_equal $options["departure"] "au revoir"
+  assert_equal "${options["departure"]}" "au revoir"
 }
 
 ## Successful Argument Typechecking

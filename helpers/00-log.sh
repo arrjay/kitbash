@@ -149,8 +149,16 @@ log.error() {
 }
 
 # --- setup ---
-log.__open
-trap log.__close EXIT
+if ! [[ -n "$BATS_VERSION" ]]; then
+  log.__open
+  trap log.__close EXIT
+else
+  # bats-core uses the fd 3 as the "want to show output" fd,
+  # and we should skip using our trap so that bats can trap exits and handle
+  # itself properly
+  log.__set_fd 3
+fi
+
 
 
 #
