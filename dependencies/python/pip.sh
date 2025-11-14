@@ -1,4 +1,4 @@
-function system.package.pip() {
+system.package.pip() {
   local _package_name=$1; shift
 
   while getopts "us:" opt; do
@@ -16,13 +16,13 @@ function system.package.pip() {
 
   __funcname=${FUNCNAME[0]}
   __babashka_log "== ${FUNCNAME[0]} $_package_name"
-  function get_id() {
+  get_id() {
     echo "${_package_name}"
   }
-  function is_met() {
+  is_met() {
     /usr/bin/pip -qqq show $_package_name
   }
-  function meet() {
+  meet() {
     if [ "$_source " != " " ] ; then
       $__babashka_sudo /usr/bin/pip -qqq install "$_source" && return $?
     else
@@ -33,20 +33,23 @@ function system.package.pip() {
   process
 }
 
-function system.package.pip.absent() {
+system.package.pip.absent() {
   # Remove a Pip package
   local _package_name=$1; shift
 
   __funcname=${FUNCNAME[0]}
   __babashka_log "== ${FUNCNAME[0]} $_package_name"
-  function get_id() {
+  
+  get_id() {
     echo "${_package_name}"
   }
-  function is_met() {
+  
+  is_met() {
     /usr/bin/pip -qqq show $_package_name && return 1
     return 0
   }
-  function meet() {
+  
+  meet() {
     $__babashka_sudo /usr/bin/pip -qqq uninstall -y "$_package_name"
   }
   process

@@ -1,4 +1,4 @@
-function babashka.enable.pip() {
+babashka.enable.pip() {
   case `lsb_release -cs` in
     "bionic")
       system.package python
