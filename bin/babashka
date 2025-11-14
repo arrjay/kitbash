@@ -1,25 +1,100 @@
 #!/bin/bash
 
 __babashka_trace=no
-__babashka_output_stream=/dev/null
+# __babashka_output_stream=/dev/null
 __babashka_dry_run=no
 
-# set -x
-# PS4='+$(date "+%F %T") ${FUNCNAME[0]}() $BASH_SOURCE:${BASH_LINENO[0]}+ '
-# set -o xtrace
 
-declare -A __babashka_dirty
+# Set up our various path arrays
+declare -a KITBASH_LIBRARY_PATHS
+KITBASH_LIBRARY_PATHS=(
+  /etc/kitbash/lib
+  # Deprecated but still used
+  /etc/babashka/lib
+  /etc/babashka/helpers
+)
+
+declare -ag KITBASH_VARIABLE_PATHS
+KITBASH_VARIABLE_PATHS=(
+  /etc/kitbash/variables
+  # Deprecated but still used
+  /etc/babashka/variables
+)
+
+declare -a KITBASH_PROVISIONER_PATHS
+# Defines the dependency paths. Always loaded after the main libraries.
+KITBASH_PROVISIONER_PATHS=(
+  /etc/kitbash/provisioners
+  /etc/kitbash/local
+  ./kitbash
+  ./.kitbash
+  # Deprecated but still useable
+  /etc/babashka/dependencies
+  /etc/babashka/local
+  ./babashka
+  ./.babashka
+)
+
+declare -a KITBASH_KIT_PATHS
+KITBASH_KIT_PATHS=(
+  # Vendored kitbash should be preferred to system kitbash for kits
+  ./kitbash/kits
+  ./.kitbash/kits
+  /etc/kitbash/kits
+  # Deprecated, supported for transitional reasons
+  ./babashka/kits
+  ./.babashka/kits
+  /etc/babashka/kits
+)
+
+declare -a KITBASH_MODEL_PATHS
+KITBASH_MODEL_PATHS=(
+  ./kitbash/models
+  ./.kitbash/models
+  /etc/kitbash/models
+  # Deprecated, supported for transitional reasons
+  ./kitbash/models
+  ./.kitbash/models
+  /etc/babashka/models
+)
+
+declare -Ag KITBASH_KITS
+declare -ag KITBASH_ORDERED_KITS
+declare -ag KITBASH_ORDERED_MODELS
+declare -Ag KITBASH_MODELS
+
+# What model we're currently executing
+declare -g KITBASH_CURRENT_MODEL
+
+# what kit we're currently resolving
+declare -g KITBASH_CURRENT_KIT
+
+# Set up our internal variables
+__KITBASH_CURRENT_INDENT=0
+declare -Ag __KITBASH_KIT_SEEN
+declare -ag __KITBASH_KIT_TREE_STACK
+declare -ag __KITBASH_MODEL_TREE_STACK
+
+
+declare -A __KITBASH_ENSURED
 # Make system info a global value so that we can query it using the 
-#   system::info commands
+#   system.info commands
 
 __babashka_usage() {
-    echo "usage: babashka [-v] [-s] [-f] [-x] [-d <directory>] <dep name>"  >&2
-    echo "  -d <directory> : search a custom directory"                     >&2
-    echo "  -s : use sudo if required"                                      >&2
-    echo "  -f : force operations"                                          >&2
-    echo "  -x : trace mode (debug)"                                        >&2
-    echo "  -y : dry-run, don't attempt to converge"                        >&2
-    echo "  -v : verbose mode"                                              >&2
+    echo "usage: babashka [-v] [-s] [-f] [-x] [-d <directory>] [command] <argument>" 
+    echo "usage: babashka [-v] [-s] [-f] [-x] [-d <directory>] <dep name>" 
+    echo "  -d <directory> : search a custom directory"                    
+    # echo "  -l <level>: set log level"                                       
+    echo "  -s : use sudo if required"                                     
+    echo "  -f : force operations"                                         
+    echo "  -x : bash trace mode (debug)"                                       
+    echo "  -y : dry-run, don't attempt to converge"                       
+    echo ""
+    echo "commands:"                       
+    echo "  apply   : Apply a model"                       
+    echo "  kits    : List installed kits"                       
+    echo "  models  : List configured models"                       
+    # echo "  -v : verbose mode"                                              >&2
     exit 1
 }
 
@@ -42,7 +117,10 @@ while getopts "vfxsyd:" opt; do
             ;;
         d)
             # Set a custom directory to also source in
-            __babashka_directory="$(echo "$OPTARG" | xargs)"
+            # __babashka_directory="$(echo "$OPTARG" | xargs)"
+            if [[ -d "$OPTARG" ]]; then
+              KITBASH_PROVISIONER_PATHS+=( "$OPTARG" )
+            fi
             ;;
         v)
             __babashka_output_stream="/dev/stderr"
@@ -65,61 +143,117 @@ if [ $__babashka_trace = "yes" ]; then
 fi
 
 __babashka_log() {
-    printf "%*s"  "$__babashka_current_indent" 1>&2
-    printf "%s\n" "$@" 1>&2
+  # emit apply "%*s%s\n" "$__babashka_current_indent" ""
+  emit apply "$@"
+  # (( indent = indent * 5))
+  #   printf "%*s"  "$indent" 1>&2
+  #   printf "%s\n" "$@" 1>&2
+  # printf "%${indent}s\n" "-$@"
+  # printf "%${indent}s\n" "-$@" | emit apply
 }
 
 __babashka_fail() {
-    echo ERROR: "$@" 1>&2
+    # echo ERROR: "$@" 1>&2
+    emit error "$@"
+    emit error "dependency didn't converge"
     exit 1
+}
+
+kitbash.fail() {
+  __babashka_fail "$@"
+}
+
+__kitbash_error() {
+  if declare -F "log.error" ; then
+    log.error "$1"
+  else
+    echo "[ERROR]: $1"
+  fi
+  exit 1
 }
 
 unmeetable() {
     __babashka_fail "$@"
 }
 
+__incr() {
+  (( __KITBASH_CURRENT_INDENT = __KITBASH_CURRENT_INDENT + 1 )) || true
+}
+
+__decr() {
+  (( __KITBASH_CURRENT_INDENT = __KITBASH_CURRENT_INDENT - 1 )) || true
+}
+
 process() {
-    # show call stack
-    if ! process_is_met; then
-        # Check if get_id is declared, so that we can log this in the 
-        # __babashka_dirty array
-        if type get_id &> /dev/null; then
-            # The function we're in defined a get_id feature, so we can mark this
-            # as a dirtied element so that later things can trigger on it
-            # if they like.
-            local __id
-            __id="$(get_id)"
-            __babashka_dirty["${FUNCNAME[1]}:${__id}"]="1"
-        fi
-        if [ "$__babashka_dry_run" = "no" ]; then
-            process_meet
-            process_is_met || __babashka_fail "dependency didn't converge"
-        else
-            __babashka_log '  `- dry run, skipping...'
-        fi
+    # Allows recursive "process" calls to mask over other context values,
+    # which is important during recursive `requires` calls, for instance.
+    # Convergence functions that implement `get_id` will get to include extra
+    # information as well.
+    local KITBASH_CONTEXT
+    KITBASH_CONTEXT="${FUNCNAME[1]}"
+    local __id
+    if declare -F get_id > /dev/null; then
+      __id="$(get_id)"
+      KITBASH_CONTEXT="${FUNCNAME[1]} $__id"
     fi
+    emit header "$KITBASH_CONTEXT"
+    __incr
+    if ! process_is_met; then
+      # Check if get_id is declared, so that we can log this in the 
+      # __babashka_dirty array
+      if [[ -n "$__id" ]]; then
+        # The function we're in defined a get_id feature, so we can mark this
+        # as a dirtied element so that later things can trigger on it
+        # if they like.
+        # This works because "process" is called at the end of the
+        # convergence function, in order to trigger the "I should 
+        # converge now" functionality.
+        __KITBASH_ENSURED["${FUNCNAME[1]}:${__id}"]="1"
+      fi
+      if [[ "$__babashka_dry_run" == "no" ]]; then
+        
+        process_meet
+        process_is_met || __babashka_fail "dependency didn't converge"
+      else
+        __babashka_log '`- dry run, skipping...'
+        # __babashka_log '  
+      fi
+    fi
+    __decr
     # If get_id exists we want to unset it so that we don't get
     # odd behaviours across invocations where it's not yet implemented.
     if type get_id &> /dev/null; then
-        unset -f get_id
+      unset -f get_id
     fi
 }
 
 process_is_met() {
-    __babashka_log '`- is met?'
-    is_met > $__babashka_output_stream
-    st=$?
-    __babashka_log "  $st"
-    return $st
+    emit apply "is met?"
+    __incr
+    is_met 
+    st="$?"
+    if [[ "$st" -eq 0 ]]; then
+      emit ok  "yes"
+    else
+      emit no  "no"
+    fi
+    __decr
+    # printf "  $st\n"
+    return "$st"
 }
 
 process_meet() {
-    __babashka_log "=> meet "
-    meet > $__babashka_output_stream
-    st=$?
+  emit apply meet
+    # prinf "=> meet "
+  __incr
+  meet
+  st="$?"
+  [[ "$st" -eq 0 ]] && emit ok met
+  __decr
+  return "$st"
     # TODO:
     # `meet` failing should cause an abort?
-    __babashka_log "=> $st"
+    # __babashka_log "=> $st"
 }
 
 on_change() {
@@ -141,14 +275,18 @@ requires_nested() {
 
 # $1 - dep name to invoke
 __babashka_invoke() {
-    (( __babashka_current_indent = __babashka_current_indent + 1 ))
-    __babashka_log "-> $1"
+    # (( __KITBASH_CURRENT_INDENT = __KITBASH_CURRENT_INDENT + 1 ))
+    __incr
+    # emit.indented "$__KITBASH_CURRENT_INDENT" apply "$1"
     
     # Is eval the right way to do this?
     # Hmm.
+    log.debug "attempting to invoke $1"
     if declare -F "$1" > /dev/null; then
+      log.debug "invoking $1"
       eval "$1"
     else
+      log.debug "Function not defined: '$1'"
       __babashka_fail "Function \`$1\` does not exist."
     fi
     
@@ -160,9 +298,18 @@ __babashka_invoke() {
     # so force it to succeed with || true, we don't want the increment/decrement
     # to alter the exit code anyway (will still return exit 1 if babashka
     # failed to converge).
-    (( __babashka_current_indent = __babashka_current_indent - 1 )) || true
+    __decr
+    # (( __KITBASH_CURRENT_INDENT = __KITBASH_CURRENT_INDENT - 1 )) || true
 }
-__babashka_load_deps() {
+__kitbash_load_libraries() {
+  local path
+  for path in "${KITBASH_LIBRARY_PATHS[@]}"; do
+    if [[ -d "$path" ]]; then
+      __babashka_load_deps_from_path "$path"
+    fi
+  done
+}
+__kitbash_load_provisioners() {
     # Rename directories to be a bit more clear what they're for
     # Include a system-level Babashka repository for common packages and stuff
     # Always load helpers first
@@ -173,11 +320,313 @@ __babashka_load_deps() {
     #  - Make this a default
     #  - Add a /etc/defaults/babashka that gets read in to provide these 
     #       variables instead of hardcoding them here
-    for path in /etc/babashka/helpers ./babashka/ /etc/babashka/dependencies "${__babashka_directory:+$__babashka_directory}"; do
-        if [ -d "$path" ]; then
-            __babashka_load_deps_from_path "$path"
-        fi
+    local path
+    for path in "${KITBASH_PROVISIONER_PATHS[@]}"; do
+      if [[ -d "$path" ]]; then
+        __babashka_load_deps_from_path "$path"
+      fi
     done
+    # for path in /etc/babashka/helpers ./babashka/ /etc/babashka/dependencies "${__babashka_directory:+$__babashka_directory}"; do
+    #     if [ -d "$path" ]; then
+    #         __babashka_load_deps_from_path "$path"
+    #     fi
+    # done
+}
+
+__kitbash_parse_json() {
+  # name = "postgres"
+  # description = "PostgreSQL Debian-alike module for Kitbash."
+  # version = "1.0.0"
+  # depends = ["pgdg"]
+  # variables = [
+  #   "POSTGRESQL_VERSION"
+  # ]
+  local path
+  local toml_keys
+  toml_keys=()
+  
+  path="$1"
+  if ! [[ -f "$path" ]]; then
+    log.debug "No such path $path"
+    return 1
+  fi
+  
+  # Optional second argument, a variable to parse the TOML into
+  if [[ -n "$2" ]]; then
+    log.debug "Passed destination hash '$2'"
+    declare -n PARSED_JSON="$2"
+  else
+    # overwrite whatever's in there, so that this is a "clean" parser
+    log.debug "Using global PARSED_JSON"
+    declare -Ag PARSED_JSON
+  fi
+  
+  local key
+  local name
+  # output format is in the form of 
+  # - keyname
+  # there should always be a name value
+  name=$(jq -r '.name' "$path")
+  log.debug "Name is $name"
+  if [[ -z "$name" ]]; then
+    log.error "Missing 'name' key in $path"
+    return 1
+  fi
+  local key_type
+  local keys
+  for key in $( jq -r 'keys | .[]' "$path" ); do
+    key_type=$( jq -r ".$key | type" "$path")
+    case "$key_type" in
+      object)
+        log.error "Unsupported key type object in $path: $key"
+        continue
+        ;;
+      array)
+        PARSED_JSON["${name}__${key}"]=$(jq -r ".$key | join(\",\")" "$path")
+        ;;
+      null)
+        # do nothing
+        log.debug "Null value for $key"
+        ;;
+      *)
+        PARSED_JSON["${name}__${key}"]=$(jq -r ".$key" "$path")
+        ;;
+    esac
+    log.debug "Setting ${name}__${key}"
+    
+    log.debug "Set as ${PARSED_JSON["${name}__${key}"]}"
+    # toml_keys+=( ${key:2:"${#key}"} )
+  done
+}
+
+###
+
+__kitbash_load_kit() {
+  local kit
+  kit="$1"
+  if ! [[ -n "$kit" ]]; then
+    log.error "Kit not defined?"
+    return 1
+  fi
+  if contains __KITBASH_KIT_TREE_STACK "$kit"; then
+    log.error "Cycle detected: $kit"
+    return 1
+  fi
+  types.set.append __KITBASH_KIT_TREE_STACK "$kit"
+  
+  local path p
+  for p in "${KITBASH_KIT_PATHS[@]}"; do
+    log.debug "Searching path '$p' for kit '$kit'"
+    if [[ -d "$p/$kit" ]]; then
+      path="$p/$kit"
+      log.debug "Found kit $kit at path: '$path'"
+      break
+    fi
+  done
+  if [[ -z "$path" ]]; then
+    # Our string management stuff should exist now
+    log.error "Could not find kit: '$kit'"
+    exit 1
+  fi
+  local dependencies
+  local dep
+  if [[ -f "$path/kitbash.json" ]]; then
+    __kitbash_parse_json "$path/kitbash.json" KITBASH_KITS
+    # the KITBASH_KITS[$kit__] namespace should now be populated
+    if [[ -v KITBASH_KITS["${kit}__depends"] ]]; then
+      # Let's iterate over loading the kits
+      IFS="," read -r dependencies <<< "${KITBASH_KITS["${kit}__depends"]}"
+      for dep in "${dependencies[@]}"; do
+        log.debug "Loading $kit dependency $dep"
+        __kitbash_load_kit "$dep"
+        if ! [[ $? ]]; then
+          log.error "Cycle detected: $kit -> $dep"
+          exit 1
+        fi
+      done
+    fi
+    # Right, let's load it in then.
+    # TODO: Extend this to support more complex loading and stuff.
+    __babashka_load_deps_from_path "$path"
+    types.set.append KITBASH_ORDERED_KITS "$kit"
+    # should return this current kit
+    array.pop __KITBASH_KIT_TREE_STACK
+  else
+    kitbash.fail "Missing $path/kitbash.json"
+  fi
+}
+
+__kitbash_load_models() {
+  local path
+  local model
+  for path in "${KITBASH_MODEL_PATHS[@]}"; do
+    if [[ -d "$path" ]]; then
+      shopt -s nullglob
+      for model in "$path"/*.json; do
+        __kitbash_load_model "$model"
+      done
+      shopt -u nullglob
+    fi
+  done
+}
+
+__kitbash_load_model() {
+  
+  local toml_keys key name
+  
+  local _path model_path
+  local model
+  model="$1"
+  
+  if contains __KITBASH_MODEL_TREE_STACK "$model"; then
+    log.error "Model cycle detected: $model"
+    return 1
+  fi
+  
+  log.debug "Searching for model '$model'"
+  for _path in "${KITBASH_MODEL_PATHS[@]}"; do
+    if [[ -d "$_path" ]]; then
+      if [[ -e "$_path/$model.json" ]]; then
+        model_path="$_path/$model.json"
+      elif [[ -e "$_path/$model/kitbash.json" ]]; then
+        model_path="$_path/$model/kitbash.json"
+      else
+        kitbash.fail "Could not find model definition for $model."
+      fi
+    fi
+  done
+  
+  types.set.append __KITBASH_MODEL_TREE_STACK "$model"
+  
+  log.debug "model: $model"
+  log.debug "model file: $model_path"
+  name=$(jq -r '.name' "$model_path")
+  if [[ -z "$name" ]]; then
+    log.error "Bad model file: $model_path"
+    exit 1
+  fi
+  
+  __kitbash_parse_json "$model_path" KITBASH_MODELS
+  
+  # Load inherited models
+  
+  if [[ -v KITBASH_MODELS["${name}__inherits"] ]]; then
+    log.debug "Found model kits: ${KITBASH_MODELS["${name}__inherits"]}"
+    local dependencies
+    # These are all read in as CSV to make later parsing easier
+    IFS="," read -r dependencies <<< "${KITBASH_MODELS["${name}__inherits"]}"
+    local dep
+    for dep in "${dependencies[@]}"; do
+      log.debug "Attempting to load inherited model '$dep'"
+      __kitbash_load_model "$dep"
+    done
+    # We've loaded the inherited model tree, so we can pop ourselves from the
+    # list of models in this particular segment of the DAG.
+    array.pop __KITBASH_MODEL_TREE_STACK
+  else
+    log.debug "No inherited models found for $name"
+  fi
+  # Load our kits I guess?
+  # Should this be in "kits" or "requires" or what? Hmm.
+  
+  if [[ -v KITBASH_MODELS["${name}__kits"] ]]; then
+    log.debug "Found model kits: ${KITBASH_MODELS["${name}__kits"]}"
+    local dependencies
+    # These are all read in as CSV to make later parsing easier
+    IFS="," read -r dependencies <<< "${KITBASH_MODELS["${name}__kits"]}"
+    local dep
+    for dep in "${dependencies[@]}"; do
+      log.debug "Attempting to load kit '$dep'"
+      __kitbash_load_kit "$dep"
+    done
+  else
+    log.debug "No kits found for $name"
+  fi
+}
+
+kitbash.apply_inherited() {
+  local -a inherited_models
+  local model
+  model="$1"
+  log.debug "Checking for inherited models for '$model'"
+  
+  if [[ -v KITBASH_MODELS["${model}__inherits"] ]]; then
+    log.debug "Found model inheritance: ${KITBASH_MODELS["${model}__inherits"]}"
+    local dependencies
+    # These are all read in as CSV to make later parsing easier
+    IFS="," read -r dependencies <<< "${KITBASH_MODELS["${model}__inherits"]}"
+    local dep
+    for dep in "${dependencies[@]}"; do
+      log.debug "Attempting to apply model '$dep'"
+      kitbash.apply "$dep"
+    done
+  else
+    log.debug "No inherited models found for '$model'."
+  fi
+  return 0
+}
+
+kitbash.apply_kits() {
+  # First, validate all the kits, before we try to run anything
+  local -A kit_functions
+  log.debug "Applying kits"
+  log.debug "$( types.array.reverse KITBASH_ORDERED_KITS )"
+  for kit in $( types.array.reverse KITBASH_ORDERED_KITS ); do
+    if [[ -v KITBASH_KITS["${kit}__entrypoint"] ]]; then
+      if ! declare -F "${KITBASH_KITS["${kit}__entrypoint"]}"; then
+        kitbash.fail "${KITBASH_KITS["${kit}__entrypoint"]} declared but not defined."
+      fi
+      kit_functions+=( ["$kit"]="${KITBASH_KITS["${kit}__entrypoint"]}" )
+    else
+      # Use the default
+      if ! declare -F "kit.$kit.apply"; then
+        kitbash.fail "Default entrypoint kit.$kit.apply not defined"
+      fi
+      kit_functions+=( ["$kit"]="kit.$kit.apply" )
+    fi
+  done
+  # Then, run stuff
+  for kit in "${!kit_functions[@]}"; do
+    KITBASH_CURRENT_KIT="$kit"
+    log.debug "Attempting to invoke kit '${kit_functions["$kit"]}'"
+    __babashka_invoke "${kit_functions["$kit"]}"
+  done
+}
+
+kitbash.apply() {
+  local model
+  model="$1"
+  
+  if [[ -z "${KITBASH_MODELS["${model}__entrypoint"]}" ]]; then
+    log.error "Model entrypoint not defined: $model"
+    exit 1
+  fi
+  KITBASH_CURRENT_MODEL="$model"
+  # First, we need to iterate through the kits that are to be applied as part
+  # of this model, and apply them as well.
+  # Models should only need to declare what kits they need, and not be
+  # required to run them directly.
+  __incr
+  kitbash.apply_inherited "$model" || kitbash.fail "Failed to apply inherited models."
+  kitbash.apply_kits || kitbash.fail "Failed to apply kits."
+  __decr
+  
+  log.debug "Attempting to invoke ${KITBASH_MODELS["${model}__entrypoint"]}"
+  __babashka_invoke "${KITBASH_MODELS["${model}__entrypoint"]}"
+}
+
+kitbash.ensure() {
+  local provisioner identifier
+  provisioner="$1"
+  identifier="$2"
+  log::debug "Checking for ensured $provisioner:$identifier"
+  if [[ -v __KITBASH_ENSURED["$provisioner:$identifier"] ]]; then
+    log::debug "Found"
+    return 0
+  fi
+  log::debug "Not found"
+  log::error "Could not find ensure for $provisioner:$identifier."
+  return 1
 }
 
 # $1 - path to search over
@@ -201,30 +650,75 @@ __babashka_find_deps_from_path() {
     # This is so that we can set up our dependencies such that we have cross-
     #   platform-ish 
     if [ -e "${1}/.babashka_no_recurse" ]; then
-        find -L "$1" -maxdepth 1 -type f -iname "*.${2:-sh}" 
+        /usr/bin/find -L "$1" -maxdepth 1 -type f -iname "*.${2:-sh}" | sort
     else
-        find -L "$1" -type f -iname "*.${2:-sh}"
+        /usr/bin/find -L "$1" -type f -iname "*.${2:-sh}" | sort
     fi
+}
+
+# so we can log before the main logging system gets initialized
+log.debug() {
+  echo "$1" >&2
 }
 
 # $1 - path to load deps from
 __babashka_load_deps_from_path() {
-    for path in $(__babashka_find_deps_from_path "$1"); do
-        # Because this is dynamic discovery, we don't care if shellcheck can't
-        #   figure out what's being sourced.
-        # shellcheck source=/dev/null
-        source "$path"
-    done
+  for path in $(__babashka_find_deps_from_path "$1"); do
+    log.debug "Loading dependencies from path: $path"
+    # Because this is dynamic discovery, we don't care if shellcheck can't
+    #   figure out what's being sourced.
+    # shellcheck source=/dev/null
+    . "$path"
+  done
 }
 
 __babashka_main() {
     # if [ $# -eq 1 ]; then
     # Bash-specific version, but this is a Bash tool, so that doesn't matter
     #   overly much.
-    if (( $# == 1 )); then
+    # Why use a good argument parser when we can use a hacky argument
+    # parser!
+    
+    if (( "$#" >= 1 )); then
+      local model
+      case "$1" in
+        apply)
+          # TODO
+          # Support more than one model being applied
+          model="$2"
+          log.debug "Applying model '$model'"
+          __kitbash_load_model "$model"
+          kitbash.apply "$model"
+        ;;
+        kits)
+          # Show our kits
+          for path in "${KITBASH_KIT_PATHS[@]}"; do
+            echo "$path:"
+            for p in "$path"/*.*; do
+              if [[ -d "$path/$p" && "$p" != "." && "$p" != ".." ]]; then
+                echo "  - $p"
+              fi
+            done
+          done
+        ;;
+        models)
+          # Show our models
+          for path in "${KITBASH_MODEL_PATHS[@]}"; do
+            echo "$path:"
+            shopt -s nullglob
+            for model in "$path"/*.json; do
+              echo "  - $model"
+            done
+            shopt -u nullglob
+          done
+        ;;
+        *)
+        # Original path, so that we don't break prior functionality
         __babashka_invoke "$1"
+        ;;
+      esac
     else
-        __babashka_usage
+      __babashka_usage
     fi
 }
 
@@ -234,7 +728,9 @@ __babashka_main() {
 
 
 # load our dependency tree, including our helpers
-__babashka_load_deps
+__kitbash_load_libraries
+__kitbash_load_provisioners
 
 # Converge. CONVERGE. COMPLY.
+
 __babashka_main "$@"

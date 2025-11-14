@@ -21,7 +21,7 @@ function system.file.symlink() {
   
   function get_id() {
     # hmmm
-    echo "${_source}:${_dest}"
+    echo "${_source} ${_dest}"
   }
 
   is_met() {

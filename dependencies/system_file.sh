@@ -9,6 +9,17 @@ system.file() {
   # TODO: Use `getopt` instead to allow more betterer parsing?
   #       Though getopt is often confusing
   #       oh well
+  
+  declare -A OPTIONS=(
+    ["-s|--source;string"]=""
+    ["-m|--mode;mode"]="0644"
+    ["-o|--owner;string"]="root"
+    ["-g|--group;string"]="root"
+    ["-c|--contents;string"]=""
+  )
+  
+  declare -a XOR=( "--source,--contents" )
+  
   while getopts "g:o:m:s:c:" opt; do
     case "$opt" in
       g)

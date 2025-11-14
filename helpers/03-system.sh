@@ -48,5 +48,5 @@ path.has_mode() {
 # groups and users.
 
 local ABSOLUTE_PATH="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-system::info::id "macos" && . "$ABSOLUTE_PATH"/system/macos.sh && return
-system::info::test "KERNEL" "linux" && . "$ABSOLUTE_PATH"/system/linux.sh && return
+system.info.id "macos" && . "$ABSOLUTE_PATH"/system/macos.sh && return
+system.info.test "KERNEL" "linux" && . "$ABSOLUTE_PATH"/system/linux.sh && return

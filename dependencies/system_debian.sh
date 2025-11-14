@@ -1,7 +1,3 @@
-# __diff_remote_key() {
-#
-# }
-
 function __system.debian.repo.custom.worker() {
   system.file ${_gpg_key_path} \
     -o root \
@@ -41,32 +37,36 @@ function system.debian.repo.custom() {
   # Reset our loops, to not break other things
   unset OPTIND
   unset OPTARG
-  __funcname=${FUNCNAME[0]}
-  __babashka_log "== ${FUNCNAME[0]} $_repo_name"
-  _gpg_key_path=/usr/share/keyrings/${_repo_name}-archive-keyring.gpg
-  _repo_path=/etc/apt/sources.list.d/${_repo_name}.list
+  __funcname="${FUNCNAME[0]}"
+  # emit apply "$__funcname $_repo_name"
+  local _gpg_key_path=/usr/share/keyrings/"${_repo_name}"-archive-keyring.gpg
+  local _repo_path=/etc/apt/sources.list.d/"${_repo_name}".list
   
   if [[ -z "$distribution" ]]; then
-    distribution=$(lsb_release -cs)
+    distribution=$(/usr/bin/lsb_release -cs)
   fi
   if [[ -z "$arch" ]]; then
-    arch=$(dpkg --print-architecture)
+    arch=$(/usr/bin/dpkg --print-architecture)
+  fi
+  
+  
+  # If the key is an http link, fetch it first
+  
+  local _keyfile
+  if echo "$key" | grep -q "http[s]*://"; then
+    log.info "${__funcname}: Fetching remote GPG key"
+    
+    /usr/bin/curl -fsSL "$key" | $__babashka_sudo /usr/bin/gpg --dearmor --yes -o "${HOME}/${_repo_name}"-archive-keyring.gpg
+    _keyfile="$HOME/${_repo_name}"-archive-keyring.gpg
+  else
+    _keyfile="$key"
   fi
   
   # Generate what we expect the contents to look like
   # This does not support deb822 format as that is not commonly available at
   #   time of writing (8 Jun 2025)
   _contents="deb [arch=${arch} signed-by=${_gpg_key_path}] ${url} ${distribution} ${channel}"
-  
-  # If the key is an http link, fetch it first
-  if echo $key | grep -q "http[s]*://"; then
-    __babashka_log "${__funcname}: Fetching remote GPG key"
-    /usr/bin/curl -fsSL $key | $__babashka_sudo gpg --dearmor --yes -o "${HOME}/${_repo_name}"-archive-keyring.gpg
-    _keyfile="$HOME/${_repo_name}"-archive-keyring.gpg
-  else
-    _keyfile=$key
-  fi
-  
+    
   function get_id() {
     echo "${_repo_name}"
   }
@@ -74,26 +74,33 @@ function system.debian.repo.custom() {
   function is_met() {
     # and the apt repo on-disk is up-to-date? Hmm.
     
-    __babashka_log "key path: $_gpg_key_path"
-    __babashka_log "repo path: $_repo_path"
-    if ! [[ -e "$_gpg_key_path" ]] && \
-      ! [[ -e "$_repo_path" ]]; then
-      # TODO:
-      # This isn't good enough. Fix this.
-      return 1;
-    fi
-    $__babashka_sudo diff "$_gpg_key_path" "$_keyfile" 2>&1 > /dev/null || return 1
-    echo "$_contents" | $__babashka_sudo diff "$_repo_path" - 2>&1 > /dev/null || return 1
-    # return 0; 
+    log.debug "key path: $_gpg_key_path"
+    log.debug "repo path: $_repo_path"
+    
+    std.file.check "$_repo_path" \
+      contents "$_contents" \
+    || return 1
+    
+    std.file.check "$_gpg_key_path" \
+      source "$_keyfile" \
+    || return 1
+    
   }
   function meet() {
+    emit apply "updating $_gpg_key_path"
+    std.file.update "$_gpg_key_path" \
+      source "$_keyfile" \
+    || return 1
+    
+    emit apply updating "$_repo_path"
+    std.file.update "$_repo_path" \
+      contents "$_contents" \
+    || return 1
+      
+    # requires_nested __system.debian.repo.custom.worker || return 1
 
-    # wait how did the variables make it into the function call
-    # weeeeird
-    requires_nested __system.debian.repo.custom.worker
-
-    __babashka_log "${__funcname}: running apt update"
-    DEBIAN_FRONTEND=noninteractive $__babashka_sudo apt-get -yqq update
+    emit info "running apt update"
+    DEBIAN_FRONTEND=noninteractive /usr/bin/apt-get -yqq update
     return 0
   }
   process

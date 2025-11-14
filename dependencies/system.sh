@@ -1,3 +1,5 @@
+kitbash.load ./system/__init__.sh
+
 function system.group() {
   _group_name=$1; shift
 
