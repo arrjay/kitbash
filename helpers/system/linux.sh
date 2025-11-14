@@ -1,6 +1,4 @@
-# does this create a function? is that how this works? How does this even work?
-
-system::info::test "KERNEL" "linux" || return
+system.info.test "KERNEL" "linux" || return
 
 user.get_uid() {
   local user="$1"

@@ -29,21 +29,21 @@ setup() {
 }
 
 @test "system.info.test error on missing segment" {
-  run system::info::test
+  run system.info.test
   [ "$status" -eq 2 ]
 }
 
 @test "system.info.test error on missing testable" {
-  run system::info::test ID_LIKE
+  run system.info.test ID_LIKE
   [ "$status" -eq 3 ]
 }
 
-@test "system::info::test error on invalid segment" {
-  run system::info::test INVALID_SEGMENT "some value"
+@test "system.info.test error on invalid segment" {
+  run system.info.test INVALID_SEGMENT "some value"
   [ "$status" -eq 4 ]
 }
 
-@test "system::info::test matches current ARCH" {
+@test "system.info.test matches current ARCH" {
   current_uname="$(uname -m)"
-  system::info::test ARCH $current_uname
+  system.info.test ARCH $current_uname
 }

@@ -1,10 +1,6 @@
-system::info::id "macos" || return
+system.info.id "macos" || return
 
 user.get_uid() {
-  user::get_uid "$@"
-}
-
-user::get_uid() {
   local identifier="$1"
   local uid
   if [[ "$identifier" =~ ^[0-9]+$ ]]; then
@@ -23,10 +19,6 @@ user::get_uid() {
 }
 
 group.get_gid() {
-  group::get_gid "$@"
-}
-
-group::get_gid() {
   local identifier="$1"
   local gid
   if [[ "$identifier" =~ ^[0-9]+$ ]]; then

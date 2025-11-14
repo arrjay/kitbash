@@ -38,7 +38,7 @@ system.package.absent.apk() {
 # But, it's not unreasonable to want to run multiple package managers on the
 #   same system, so, we can define the above safely.
 
-system::info::like == "alpine" || return
+system.info.like == "alpine" || return
 
 system.package() {
   system.package.apk "$@"

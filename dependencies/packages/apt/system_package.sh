@@ -8,11 +8,16 @@ system.package.apt() {
     echo "${_package_name}"
   }
   is_met() {
-    dpkg -s ${apt_pkg:-$_package_name} 2>&1 > /dev/null
+    dpkg -s ${apt_pkg:-$_package_name} > /dev/null 2>&1
   }
   meet() {
     [ -n "$__babushka_force" ] && apt_flags="${apt_flags} -f --force-yes"
-    DEBIAN_FRONTEND=noninteractive $__babashka_sudo apt-get -o DPkg::Lock::Timeout=60 -yqq install "$apt_flags" "${apt_pkg:-$_package_name}"
+    DEBIAN_FRONTEND=noninteractive apt-get \
+      -o DPkg::Lock::Timeout=60 \
+      -yqq install \
+      "$apt_flags" \
+      "${apt_pkg:-$_package_name}" \
+      >/dev/null 2>&1
   }
   process
 }
@@ -39,7 +44,7 @@ system.package.absent.apt() {
 # Don't redefine the base functions if we're not Debian-like
 # This will pass on Ubuntu as well.
 
-system::info::like "debian" || return
+system.info.like "debian" || return
 
 system.package() {
   system.package.apt "$@"

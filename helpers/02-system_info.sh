@@ -155,8 +155,8 @@ __babashka_load_system_info
 #
 #
 
-# what if: info::system
-system::info() {
+# what if: info.system
+system.info() {
   local segment
   segment="$(normalize "$1")"
   # Generate the list of keys
@@ -181,7 +181,7 @@ system::info() {
 
 ##
 
-system::info::test() {
+system.info.test() {
   local segment
   local to_test
   segment="$(normalize "$1")"
@@ -190,7 +190,7 @@ system::info::test() {
   [[ -n "$to_test" ]] || return 3
   local value
   local status
-  value="$(system::info "$segment")"
+  value="$(system.info "$segment")"
   status=$?
   (( $status == 0 ))  || return $status
   [[ "$value" == "$to_test" ]]
@@ -198,48 +198,48 @@ system::info::test() {
 
 ##
 
-system::info::like() { 
-  system::info::test ID_LIKE "$1" || system::info::test ID "$1"
+system.info.like() { 
+  system.info.test ID_LIKE "$1" || system.info.test ID "$1"
 }
 
 ##
 
-system::info::id() {
-  system::info::test "ID" "$1"
+system.info.id() {
+  system.info.test "ID" "$1"
 }
 
 ##
 
-system::info::name() {
-  system::info::test "NAME" "$1"
+system.info.name() {
+  system.info.test "NAME" "$1"
 }
 
 ##
 
-system::info::version() {
-  system::info::test "VERSION_ID" "$1"
+system.info.version() {
+  system.info.test "VERSION_ID" "$1"
 }
 
 ##
 
-system::info::arch() {
-  system::info::test "ARCH" "$1"
+system.info.arch() {
+  system.info.test "ARCH" "$1"
 }
 
 ##
 
-system::info::nodename() {
-  system::info::test "NODENAME" "$1"
+system.info.nodename() {
+  system.info.test "NODENAME" "$1"
 }
 
 ##
 
-system::info::cpus() {
-  system::info::test "CPUS" "$1"
+system.info.cpus() {
+  system.info.test "CPUS" "$1"
 }
 
 ##
 
-system::info::memory() {
-  system::info::test "MEMORY" "$1"
+system.info.memory() {
+  system.info.test "MEMORY" "$1"
 }
