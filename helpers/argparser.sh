@@ -1,10 +1,16 @@
 ## Implements core argument parsing for Babashka modules.
-
+# TODO
+# Make this take an optional destination hash somehow.
+# Last element?
+# Or some variable it checks?
 std.argparser() {
   # Wipe options
-  unset options
+  local -n dst_options
+  dst_options="$1"
+  shift
+  # unset options
   # has to declare global in order to return properly
-  declare -Ag options
+  # declare -Ag options
   declare -A normalized
   declare -a is_nullable
   
@@ -35,7 +41,7 @@ std.argparser() {
           log.debug "Invalid value for $option: $value"
           return 1
         fi
-        options["${long:-"$short"}"]="$value"
+        dst_options["${long:-"$short"}"]="$value"
         shift 2
         option_matched=1
         break
@@ -56,9 +62,9 @@ std.argparser() {
     IFS="|" read -r short long <<< "$option"
     option="${normalized["$option"]}"
     # Only apply default if the option isn't already set
-    if ! [[ -v options["$option"] ]]; then
+    if ! [[ -v dst_options["$option"] ]]; then
       log.debug "Setting $option to ${OPTIONS[$opt]}"
-      options["$option"]="${OPTIONS[$opt]}"
+      dst_options["$option"]="${OPTIONS[$opt]}"
     fi
   done
   
@@ -73,8 +79,8 @@ std.argparser() {
     for xor_option in "${xor_options[@]}"; do
       log.debug "std.argparser: xor checking checking ${xor_option}"
       # Check for each value in the output options hash
-      if [[ -n "${options[$xor_option]}" ]]; then
-        log.debug "found $xor_option: ${options[$xor_option]}"
+      if [[ -n "${dst_options[$xor_option]}" ]]; then
+        log.debug "found $xor_option: ${dst_options[$xor_option]}"
         ((xor_count++))
       fi
     done
@@ -90,7 +96,7 @@ std.argparser() {
     fi
     # Finally, set up our nullable lookup
     for xor_option in "${xor_options[@]}"; do
-      if [[ -z "${options[$xor_option]}" ]]; then
+      if [[ -z "${dst_options[$xor_option]}" ]]; then
           is_nullable+=( "$xor_option" )
       fi
     done
@@ -101,7 +107,7 @@ std.argparser() {
   for opt in "${!OPTIONS[@]}"; do
     IFS=";" read -r option type <<< "$opt"
     option="${normalized["$option"]}"
-    if [[ -z "${options[$option]}" && -z "${OPTIONS[$opt]}" ]]; then
+    if [[ -z "${dst_options[$option]}" && -z "${OPTIONS[$opt]}" ]]; then
       # If we know we can let this one be nullable, we continue the loop
       in_array "$option" "${is_nullable[@]}" && continue
       # Otherwise, we error out
