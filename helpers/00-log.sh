@@ -16,6 +16,7 @@ declare -Ag LOG_LEVELS=(
   [info]=1
   [warn]=2
   [error]=3
+  [notice]=4
 )
 # Default log level is warn
 # : "${KITBASH_LOG_LEVEL:-2}"
@@ -79,7 +80,9 @@ log.level() {
   esac
 }
 
-# --- internal: write line ---
+# log.__write
+# Internal function
+# Write line to configured file descriptor
 log.__write() {
   local level="$1"; shift
   local message="$*"
@@ -127,7 +130,7 @@ log.__should_log() {
 
 }
 
-# --- levels ---
+# log level definitions
 log.debug() {
   log.__should_log debug || return 0
   log.__write "$(str.dim "DEBUG")" "$*"
@@ -148,7 +151,13 @@ log.error() {
   log.__write "$(str.color bold red -- "ERROR")" "$*"
 }
 
-# --- setup ---
+log.notice() {
+  log.__should_log notice || return 0
+  log.__write "$(str.color dim yellow -- "NOTICE")" "$*"
+}
+
+# Logging setup
+# Special guard in case we're inside of a BATS environment
 if ! [[ -n "$BATS_VERSION" ]]; then
   log.__open
   trap log.__close EXIT
@@ -193,7 +202,8 @@ emit.indented() {
   local icon
   case "$level" in
     header)
-      icon="$(str.color bold -- "—")"
+      icon="$(str.color bold -- "##")"
+      log.info emit header "$msg"
       ;;
     apply)
       icon="$(str.color bright-blue bold -- "→")"
@@ -214,6 +224,10 @@ emit.indented() {
     info)
       icon="$(str.color bold -- i)"
       log.info emit info "$msg"
+      ;;
+    notice)
+      icon="$(str.color dim yellow -- n)"
+      log.info emit notice "$msg"
       ;;
     *)
       icon="$(str.color bold -- ?)"
