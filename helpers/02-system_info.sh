@@ -116,6 +116,12 @@ __babashka_load_system_info() {
             #      As I don't have a machine with a performance/efficiency core
             #      split that's running Linux, I can't test any means of doing this.
             __babashka_system_info["KERNEL"]="linux"
+            
+            local init
+            if ! init="$(__kitbash_identify_init)"; then
+              kitbash.fail "Could not identify init system"
+            fi
+            __babashka_system_info["INIT"]="$init"
         ;;
         Darwin)
             # so /etc/os-release does not exist on macOS, because, why would it.
@@ -135,6 +141,7 @@ __babashka_load_system_info() {
             local tmp_memsize
             tmp_memsize="$(sysctl -n hw.memsize)"
             __babashka_system_info["MEMORY"]=$((tmp_memsize / 1024 / 1024 ))
+            __babashak_system_info["INIT"]="launchd"
             ;;
         *)
           echo "Unknown system"
@@ -143,6 +150,32 @@ __babashka_load_system_info() {
     esac
     __babashka_system_info["ARCH"]="$(uname -m)"
     __babashka_system_info["NODENAME"]="$(uname -n)"
+}
+
+__kitbash_identify_init() {
+  # systemd: both systemctl AND the runtime dir must exist
+  if command -v systemctl >/dev/null 2>&1 \
+     && [[ -d /run/systemd/system ]]; then
+    printf 'systemd'
+    return 0
+  fi
+  
+  # OpenRC: rc-status exists and "supervise-daemon" exists
+  if command -v rc-status >/dev/null 2>&1 \
+     && command -v supervise-daemon >/dev/null 2>&1; then
+    printf 'openrc'
+    return 0
+  fi
+  
+  # SysV fallback: presence of /etc/init.d and 'service'
+  if command -v service >/dev/null 2>&1 \
+     && [[ -d /etc/init.d ]]; then
+    printf 'sysv'
+    return 0
+  fi
+  # Otherwise we don't know
+  printf 'unknown'
+  return 1
 }
 
 # Load system info
@@ -242,4 +275,8 @@ system.info.cpus() {
 
 system.info.memory() {
   system.info.test "MEMORY" "$1"
+}
+
+system.info.init() {
+  system.info.test INIT "$1"
 }
