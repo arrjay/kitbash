@@ -147,6 +147,28 @@ array.pop() {
   echo "$value"
 }
 
+# 
+types.assoc.copy() {
+  local src_name dst_name key
+  src_name="$1"
+  dst_name="$2"
+  if ! declare -p "$src_name" 2>/dev/null | grep -q 'declare -A'; then
+    log.error "No such source '$src'"
+    return 1
+  fi
+  if ! declare -p "$dst_name" 2>/dev/null | grep -q 'declare -A'; then
+    log.error "No such destination '$dst'"
+    return 2
+  fi
+  local -n src
+  local -n dst
+  src="$src_name"
+  dst="$dst_name"
+  for key in "${src[@]}"; do
+    dst["$key"]="${src["$key"]}"
+  done
+}
+
 ##
 ## string helpers
 ##
@@ -298,7 +320,7 @@ kitbash.path() {
 kitbash.file() {
   local request_path relative_path dir lookup_path dir
   declare -a lookup_paths
-  lookup_paths=("${KITBASH_PROVISIONER_PATHS[@]}")
+  lookup_paths=("${KITBASH_LOCAL_PATHS[@]}" "${KITBASH_FILE_RESOLUTION_PATHS[@]}")
   request_path="$1"
   
   if [[ -z "$request_path" ]]; then
@@ -312,19 +334,16 @@ kitbash.file() {
   
   local current_model current_kit test_path
   # TODO: Should we even bother with these functions? Hm.
-  current_model="$KITBASH_CURRENT_MODEL"
+  # current_model="$KITBASH_CURRENT_MODEL"
   current_kit="$KITBASH_CURRENT_KIT"
   
-  log.debug "Current model: '$KITBASH_CURRENT_MODEL'"
+  # log.debug "Current model: '$KITBASH_CURRENT_MODEL'"
   log.debug "Current kit: '$KITBASH_CURRENT_KIT'"
   
   # Extend the lookup paths with the model and kit paths
   # Uses loops as kit and model paths do lookup both at the system level but
   # also allow for kits to be present in the CWD, which should allow for
   # overriding to work as maybe expected.
-  for dir in "${KITBASH_MODEL_PATHS[@]}"; do
-    lookup_paths+=( "$dir/$current_model" )
-  done
   
   for dir in "${KITBASH_KIT_PATHS[@]}"; do
     lookup_paths+=( "$dir/$current_kit" )

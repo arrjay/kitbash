@@ -5,5 +5,8 @@
   "kits": [
     "postgres"
   ],
-  "entrypoint": "model.inherited.apply"
+  "entrypoint": "model.inherited.apply",
+  "variables": [
+    "itsowntest"
+  ]
 }

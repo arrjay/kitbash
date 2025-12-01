@@ -27,7 +27,7 @@ fi
   
   
 [[ -L /etc/kitbash/lib ]] || \
-  sudo ln -s /opt/kitbash/helpers /etc/babashka/lib
+  sudo ln -s /opt/kitbash/helpers /etc/kitbash/lib
 
 if [[ -d /opt/mo ]]; then
   pushd /opt/mo

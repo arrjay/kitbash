@@ -5,5 +5,11 @@
   "inherits": [
     "inherited"
   ],
-  "entrypoint": "model.example.apply"
+  "entrypoint": "model.example.apply",
+  "variables": [
+    "test"
+  ],
+  "secrets": [
+    "another"
+  ]
 }

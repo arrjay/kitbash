@@ -28,7 +28,8 @@ std.file.check() {
   )
   declare -a XOR=( "source,contents" )
   # populates the dict "options" for us
-  std.argparser "$@" || return 1
+  local -A options
+  std.argparser options "$@" || return 1
   log.debug "argparse successful"
   [[ -e "$_filename" && -f "$_filename" ]] || return 1
   log.debug "file exists and is a file"
@@ -42,20 +43,20 @@ std.file.check() {
     log.debug "testing contents"
     std.file.has_content "$_filename" "${options["contents"]}" || return 1
     
-  # __babashka_log "contents are correct"
     
   else
     log.debug "testing source"
     std.file.matches "$_filename" "${options["source"]}" || return 1
   fi
-  # __babashka_log "file is correct"
   unset OPTIONS
   unset XOR
   return 0
 }
 
 std.file.update() {
-  local _filename="$1"; shift
+  local _filename tmpfn
+  _filename="$1"
+  shift
   log.debug "updating $_filename"
   declare -A OPTIONS=(
     ["s|source;string"]=""
@@ -66,23 +67,29 @@ std.file.update() {
   )
   declare -a XOR=( "source,contents" )
   log.debug "attempting argparse"
-  std.argparser "$@" || return 1
+  local -A options
+  std.argparser options "$@" || return 1
   log.debug "argparse successful"
+  
+  tmpfn=$(mktemp "$_filename".XXXXXXXXXX)
+  
   if [[ -n "${options["source"]}" ]]; then
     log.debug "updating file by source"
     /usr/bin/cp "${options["source"]}" "$_filename"
   elif [[ -n "${options["contents"]}" ]]; then
     log.debug "updating file by tee"
     # Do it quietly
-    /bin/echo "${options["contents"]}" | /usr/bin/tee "$_filename" > /dev/null
+    /bin/echo "${options["contents"]}" | /usr/bin/tee "$tmpfn" > /dev/null
   else
     # Fail
     log.debug "neither source nor options set?"
     return 1;
   fi
-  /bin/chmod "${options["mode"]}" "$_filename" || return 1
-  /bin/chown "${options["owner"]}" "$_filename" || return 1
-  /bin/chgrp "${options["group"]}" "$_filename" || return 1
+  /bin/chmod "${options["mode"]}"  "$tmpfn" || return 1
+  /bin/chown "${options["owner"]}" "$tmpfn" || return 1
+  /bin/chgrp "${options["group"]}" "$tmpfn" || return 1
+  
+  mv -f "$tmpfn" "$_filename"
   
   unset OPTIONS
   unset XOR

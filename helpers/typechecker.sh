@@ -62,6 +62,8 @@ std.typecheck() {
       return 1
       # otherwise, attempt to match valid ipv6 addresses?
       ;;
+    # TODO
+    # Add semver
     *)
       # If type is unknown, return an error
       echo "Unknown type: $type"

@@ -5,6 +5,17 @@ __babashka_trace=no
 __babashka_dry_run=no
 
 
+# Set the default log level
+# Default log level is notice
+KITBASH_LOG_LEVEL="${KITBASH_LOG_LEVEL:-4}"
+
+declare -g KITBASH_MODELS_DIRECTORY_NAME="models.d"
+declare -ag KITBASH_VARIABLE_SUFFIXES
+KITBASH_VARIABLE_SUFFIXES=(
+  sh
+  bash
+)
+
 # Set up our various path arrays
 declare -a KITBASH_LIBRARY_PATHS
 KITBASH_LIBRARY_PATHS=(
@@ -19,6 +30,13 @@ KITBASH_VARIABLE_PATHS=(
   /etc/kitbash/variables
   # Deprecated but still used
   /etc/babashka/variables
+)
+
+declare -ag KITBASH_SECRETS_PATHS
+KITBASH_SECRETS_PATHS=(
+  /etc/kitbash/secrets
+  # Deprecated but still used
+  /etc/babashka/secrets
 )
 
 declare -a KITBASH_PROVISIONER_PATHS
@@ -49,13 +67,24 @@ KITBASH_KIT_PATHS=(
 
 declare -a KITBASH_MODEL_PATHS
 KITBASH_MODEL_PATHS=(
-  ./kitbash/models
-  ./.kitbash/models
-  /etc/kitbash/models
+  ./kitbash/"$KITBASH_MODELS_DIRECTORY_NAME"
+  ./.kitbash/"$KITBASH_MODELS_DIRECTORY_NAME"
+  /etc/kitbash/"$KITBASH_MODELS_DIRECTORY_NAME"
   # Deprecated, supported for transitional reasons
-  ./kitbash/models
-  ./.kitbash/models
-  /etc/babashka/models
+  ./babashka/"$KITBASH_MODELS_DIRECTORY_NAME"
+  ./.babashka/"$KITBASH_MODELS_DIRECTORY_NAME"
+  /etc/babashka/"$KITBASH_MODELS_DIRECTORY_NAME"
+)
+
+declare -a KITBASH_LOCAL_PATHS
+KITBASH_LOCAL_PATHS=(
+  ./kitbash/local
+  ./.kitbash/local
+  /etc/kitbash/local
+  # Supported for legacy reasons
+  ./babashka/local
+  ./.babashka/local
+  /etc/babashka/local
 )
 
 declare -Ag KITBASH_KITS
@@ -65,6 +94,13 @@ declare -Ag KITBASH_MODELS
 
 # What model we're currently executing
 declare -g KITBASH_CURRENT_MODEL
+# Model inheritance tree
+# We walk this in apply order
+declare -ag KITBASH_MODEL_INHERITANCE
+
+# kitbash.file path resolution tree
+# generated via __kitbash_load_model, as it walks the model inheritance tree
+declare -ag KITBASH_FILE_RESOLUTION_PATHS
 
 # what kit we're currently resolving
 declare -g KITBASH_CURRENT_KIT
@@ -99,49 +135,49 @@ __babashka_usage() {
     exit 1
 }
 
-while getopts "vfxsyd:" opt; do
-    case $opt in
-        x)
-            __babashka_trace=yes
-            ;;
-        s)
-        # TODO:
-        # Hardcode the sudo path, since this is potentially a bit dicey
-        # TODO:
-        # Is this even a good idea? Like, I think we should make the converge
-        #   either run _as_ root, or not be able to do sudo operations itself.
-        #   None of this ... half-measure stuff.
-            __babashka_sudo="sudo"
-            ;;
-        f)
-            __babushka_force="yes"
-            ;;
-        d)
-            # Set a custom directory to also source in
-            # __babashka_directory="$(echo "$OPTARG" | xargs)"
-            if [[ -d "$OPTARG" ]]; then
-              KITBASH_PROVISIONER_PATHS+=( "$OPTARG" )
-            fi
-            ;;
-        v)
-            __babashka_output_stream="/dev/stderr"
-            ;;
-        y)
-            __babashka_dry_run="yes"
-            ;;
-        \?)
-            __babashka_usage
-            ;;
-    esac
-done
-
-((shift_value = OPTIND - 1))
-shift $shift_value
-unset OPTIND
-# echo "Remanant: $@"
-if [ $__babashka_trace = "yes" ]; then
-    set -x
-fi
+parse_main_args() {
+  local opt OPTIND
+  OPTIND=1
+  while getopts "vfxsyd:" opt; do
+      case $opt in
+          x)
+              __babashka_trace=yes
+              ;;
+          s)
+          # TODO:
+          # Hardcode the sudo path, since this is potentially a bit dicey
+          # TODO:
+          # Is this even a good idea? Like, I think we should make the converge
+          #   either run _as_ root, or not be able to do sudo operations itself.
+          #   None of this ... half-measure stuff.
+              __babashka_sudo="sudo"
+              ;;
+          f)
+              __babushka_force="yes"
+              ;;
+          d)
+              # Set a custom directory to also source in
+              # __babashka_directory="$(echo "$OPTARG" | xargs)"
+              if [[ -d "$OPTARG" ]]; then
+                KITBASH_PROVISIONER_PATHS+=( "$OPTARG" )
+              fi
+              ;;
+          v)
+              __babashka_output_stream="/dev/stderr"
+              ;;
+          y)
+              __babashka_dry_run="yes"
+              ;;
+          \?)
+              __babashka_usage
+              ;;
+      esac
+  done
+  
+  ((shift_value = OPTIND - 1))
+  shift $shift_value
+  REMAINING_ARGS=("$@")
+}
 
 __babashka_log() {
   # emit apply "%*s%s\n" "$__babashka_current_indent" ""
@@ -182,6 +218,7 @@ __incr() {
 }
 
 __decr() {
+  [[ "$__KITBASH_CURRENT_INDENT" == 0 ]] && return
   (( __KITBASH_CURRENT_INDENT = __KITBASH_CURRENT_INDENT - 1 )) || true
 }
 
@@ -472,7 +509,7 @@ __kitbash_load_model() {
   
   local key name
   
-  local _path model_path
+  local _path model_path fn path
   local model
   model="$1"
   
@@ -483,17 +520,28 @@ __kitbash_load_model() {
   
   log.debug "Searching for model '$model'"
   for _path in "${KITBASH_MODEL_PATHS[@]}"; do
+    log.debug "Checking model path $_path"
+    # If this model path even exists
     if [[ -d "$_path" ]]; then
+      log.debug "path exists: $_path"
+      # Even if there's a $model.json, the path will always be the model
+      # name, which is where the files/ directory will always live
+      path="$_path/$model"
+      # Do we have a bare name definition?
       if [[ -e "$_path/$model.json" ]]; then
         model_path="$_path/$model.json"
+        log.debug "Found model definition: $model_path"
+        break
+      # Or is it in the model folder itself?
       elif [[ -e "$_path/$model/kitbash.json" ]]; then
         model_path="$_path/$model/kitbash.json"
-      else
-        kitbash.fail "Could not find model definition for $model."
+        log.debug "Found model definition: $model_path"
+        break
       fi
     fi
   done
   
+  [[ -z "$model_path" ]] && kitbash.fail "Could not find model definition for $model."
   types.set.append __KITBASH_MODEL_TREE_STACK "$model"
   
   log.debug "model: $model"
@@ -505,6 +553,11 @@ __kitbash_load_model() {
   fi
   
   __kitbash_parse_json "$model_path" KITBASH_MODELS
+  
+  # Add this models' files to the file path resolver, if it exists.
+  [[ -e "$path"/files ]] && types.set.append KITBASH_FILE_RESOLUTION_PATHS "$path"
+  
+  types.set.append KITBASH_ORDERED_MODELS "$model"
   
   # Load inherited models
   
@@ -548,6 +601,8 @@ kitbash.apply_inherited() {
   model="$1"
   log.debug "Checking for inherited models for '$model'"
   
+  types.set.append KITBASH_MODEL_INHERITANCE "$model"
+  
   if [[ -v KITBASH_MODELS["${model}__inherits"] ]]; then
     log.debug "Found model inheritance: ${KITBASH_MODELS["${model}__inherits"]}"
     local dependencies
@@ -557,6 +612,9 @@ kitbash.apply_inherited() {
     for dep in "${dependencies[@]}"; do
       log.debug "Attempting to apply model '$dep'"
       kitbash.apply "$dep"
+      if ! [[ $? ]]; then
+        return $?
+      fi
     done
   else
     log.debug "No inherited models found for '$model'."
@@ -597,17 +655,21 @@ kitbash.apply() {
   
   if [[ -z "${KITBASH_MODELS["${model}__entrypoint"]}" ]]; then
     log.error "Model entrypoint not defined: $model"
-    exit 1
+    return 1
   fi
-  KITBASH_CURRENT_MODEL="$model"
+  # Add ourself to the inheritance list
+  types.set.append KITBASH_MODEL_INHERITANCE "$model"
+  # Don't allow overwriting of the current model, since we want the model to
+  # override its inherited models, if relevant.
+  [[ -z "$KITBASH_CURRENT_MODEL" ]] && KITBASH_CURRENT_MODEL="$model"
   # First, we need to iterate through the kits that are to be applied as part
   # of this model, and apply them as well.
   # Models should only need to declare what kits they need, and not be
   # required to run them directly.
   __incr
   kitbash.apply_inherited "$model" || kitbash.fail "Failed to apply inherited models."
-  # Reset the model
-  KITBASH_CURRENT_MODEL="$model"
+  # Remove ourself from the inheritance list
+  types.set.pop KITBASH_MODEL_INHERITANCE "$model"
   # kitbash.apply_kits || kitbash.fail "Failed to apply kits."
   __decr
   
@@ -658,7 +720,7 @@ __babashka_find_deps_from_path() {
 
 # so we can log before the main logging system gets initialized
 log.debug() {
-  [[ "$KITBASH_LOG_LEVEL" -le "0" ]] && return
+  (( "${KITBASH_LOG_LEVEL:-0}" == 0 )) || return
   echo "$1" >&2
 }
 
@@ -679,6 +741,12 @@ __babashka_main() {
     #   overly much.
     # Why use a good argument parser when we can use a hacky argument
     # parser!
+    
+    parse_main_args "$@"
+    
+    if [ $__babashka_trace = "yes" ]; then
+        set -x
+    fi
     
     if (( "$#" >= 1 )); then
       local model
@@ -715,6 +783,93 @@ __babashka_main() {
             shopt -u nullglob
           done
         ;;
+        validate)
+          # Validate a model
+          # Lists out all variables that are listed in all the kits, and
+          # whether or not they can be found via info.var
+          model="$2"
+          log.debug "Validate $model"
+          __kitbash_load_model "$model"
+          local m var v
+          for m in "${KITBASH_ORDERED_MODELS[@]}"; do
+            emit header $(str.color bold underline -- "$m")
+            #
+            __incr
+            #
+            log.debug "Examining $m"
+            emit header $(str.color underline -- "Variables:")
+            if ! kitbash.model.has_key "$m" variables; then
+              emit info "No variables..."
+            else
+              __incr
+              for var in $(kitbash.model.variables "$m"); do
+                v=$(info.var "$var" missing)
+                if [[ "$v" == "missing" ]]; then
+                  emit error $(str.color bold bg-red -- "$var")
+                else
+                  emit ok "$var: $v"
+                fi
+              done
+              __decr
+            fi
+            
+            # List out secrets next
+            #
+            emit header $(str.color underline -- "Secrets:")
+            #
+            __incr
+            if ! kitbash.model.has_key "$m" secrets; then
+              emit info "No secrets..."
+            else
+              for var in $(kitbash.model.secrets "$m"); do
+                if ! v=$(info.var.secret "$var"); then
+                  emit error $(str.color bold bg-red -- "$var")
+                else
+                  emit ok "$var:" $(str.color bold bg-white black -- "[REDACTED]")
+                fi
+              done
+            fi
+            __decr
+            
+            emit header $(str.color underline -- "Kits:")
+            __incr
+            if ! kitbash.model.has_key "$m" kits; then
+              emit info "No kits..."
+            else
+              for kit in "$(kitbash.model.kits "$m")"; do
+                emit header $(str.color underline -- "$kit")
+                __incr
+                if ! kitbash.kit.has_key "$kit" variables; then
+                  emit info "No variables..."
+                  continue
+                fi
+                for var in $(kitbash.kit.variables "$kit"); do
+                  v=$(info.var "$var" missing)
+                  if [[ "$v" == "missing" ]]; then
+                    emit error $(str.color bold bg-red -- "$var")
+                  else
+                    emit ok "$var: $v"
+                  fi
+                done
+                __decr
+                emit header $(str.color italic underline -- "Secrets")
+                __incr
+                for var in $(kitbash.kit.secrets "$m"); do
+                  if ! v=$(info.var.secret "$var"); then
+                    emit error $(str.color bold bg-red -- "$var")
+                  else
+                    emit ok "$var:" $(str.color bold bg-white black -- "[REDACTED]")
+                  fi
+                done
+                __decr
+              done
+              __decr
+            fi
+            __decr
+          done
+          # Then lists out all the secrets, and whether or not they can be
+          # found.
+          ;;
         *)
         # Original path, so that we don't break prior functionality
         __babashka_invoke "$1"
@@ -736,4 +891,6 @@ __kitbash_load_provisioners
 
 # Converge. CONVERGE. COMPLY.
 
-__babashka_main "$@"
+if [[ ${BASH_SOURCE[0]} == "$0" ]]; then
+  __babashka_main "$@"
+fi

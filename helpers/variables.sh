@@ -7,6 +7,7 @@
 # without much issue later on.
 
 declare -ag __KITBASH_VAR_RESOLVERS
+declare -ag __KITBASH_VAR_SECRET_RESOLVERS
 
 declare -Ag __KITBASH_VAR_CACHE
 declare __KITBASH_LOAD_VARIABLES
@@ -18,18 +19,29 @@ __KITBASH_LOAD_VARIABLES=0
 #   1. Cached value (if already loaded)
 #   2. Resolvers as defined in __KITBASH_VAR_RESOLVERS
 info.var() {
-  local name="$1"
-  local default="${2-}"
-  local value=""
+  local name default value
+  name="$1"
+  default="${2-}"
+  value=""
+   
+  [[ "$name" =~ ^[A-Za-z_][A-Za-z0-9_]*$ ]] || {
+    log.error "Invalid variable name: %s" "$name"
+    return 1
+  }
   
   log.debug "Searching for variable: '$name'"
   if [[ "${__KITBASH_LOAD_VARIABLES}" -eq 0 ]]; then
     log.debug "kitbash loading variables..."
-    kitbash.vars.load "$name"
+    value=$(kitbash.vars.load "$name")
+    [[ -n "$value" ]] && {
+      echo "$value"
+      __KITBASH_LOAD_VARIABLES=1
+      return 0
+    }
   fi
 
   # 1. Cached value
-  if [[ -n "${__KITBASH_VAR_CACHE[$name]+x}" ]]; then
+  if [[ -n "${__KITBASH_VAR_CACHE["$name"]+x}" ]]; then
     log.debug "info.var: cache hit for '$name'"
     log.debug "Value: ${__KITBASH_VAR_CACHE["$name"]}"
     echo "${__KITBASH_VAR_CACHE["$name"]}"
@@ -37,13 +49,31 @@ info.var() {
   fi
   # 3. Default / error
   if [[ -n "$default" ]]; then
-    log.debug "info.var: using default for '$name'"
-    __KITBASH_VAR_CACHE["$name"]="$default"
+    log.debug "info.var: returning default for '$name'"
     echo "$default"
     return 0
   fi
 
   log.error "Variable '$name' not set and no default provided"
+  return 1
+}
+
+info.var.secret() {
+  local name resolver val
+  name="$1"
+  log.debug "Searching for secret '$name'"
+  [[ "$name" =~ ^[A-Za-z_][A-Za-z0-9_]*$ ]] || {
+    log.error "Invalid variable name: %s" "$name"
+    return 1
+  }
+  for resolver in "${__KITBASH_VAR_SECRET_RESOLVERS[@]}"; do
+    log.debug "Checking resolver '$resolver'"
+    val=$("$resolver" "$name")
+    if [[ -n "$val" ]]; then
+      echo "$val"
+      return 0
+    fi
+  done
   return 1
 }
 
@@ -66,6 +96,7 @@ kitbash.vars.load() {
   local resolver
   local name
   name="$1"
+  
   log.debug "Attempting to load variable: '${name}'"
   log.debug "Resolvers: ${__KITBASH_VAR_RESOLVERS[@]}"
   for resolver in "${__KITBASH_VAR_RESOLVERS[@]}"; do
@@ -76,7 +107,7 @@ kitbash.vars.load() {
       if [[ -n "$value" ]]; then
         log.debug "info.var: resolved '$name' via $resolver"
         __KITBASH_VAR_CACHE["$name"]="$value"
-        echo "$value"
+        printf '%s' "$value"
         return 0
       fi
     else
@@ -105,5 +136,44 @@ kitbash.vars.register_resolver() {
   esac
   log.debug "Resolvers now contains: '${__KITBASH_VAR_RESOLVERS[@]}'"
 }
+
+kitbash.vars.secrets.register_resolver() {
+  local function
+  function="$1"
+  log.debug "Registering secrets resolver: '${function}'"
+  local mode
+  mode="${2:-prepend}"
+  
+  case "$mode" in
+    prepend)
+      log.debug "Prepending '${function}'"
+      types.set.prepend __KITBASH_VAR_SECRET_RESOLVERS "$function"
+      ;;
+    append|*)
+      log.debug "Appending '${function}'"
+      types.set.append __KITBASH_VAR_SECRET_RESOLVERS "$function"
+      ;;
+  esac
+  log.debug "Resolvers now contains: '${__KITBASH_VAR_SECRET_RESOLVERS[@]}'"
+}
+
+
+# External interface for exporting variables
+kitbash.export() {
+  eval "$(kitbash.__export "$@")"
+}
+
+# Internal function
+# Generates a list of printf statements to create local -x scoped variables,
+# so that `mo` can source variables from the environment as expected during
+# its run.
+kitbash.__export() {
+  local name value
+  for name in "$@"; do
+    value="$(info::var "$name")" || return 1
+    printf 'local -x %s=%q\n' "$name" "$value"
+  done
+}
+
 
 kitbash.load variables/files.sh

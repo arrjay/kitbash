@@ -1,0 +1,1 @@
+GREETING=modelname_directory

@@ -50,5 +50,5 @@ system.file.template.has_changed() {
   system.file.template /tmp/template_changed \
     -t ${ABSOLUTE_PATH}/../files/templates/test_foreach.mo \
     -s ${ABSOLUTE_PATH}/../files/templates/test_foreach_variables
-  on_change "system.file.template:/tmp/template_changed" && __babashka_log "change noted"
+  # on_change "system.file.template:/tmp/template_changed" && __babashka_log "change noted"
 }
