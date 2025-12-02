@@ -32,10 +32,10 @@ kitbash.model.key() {
     log.debug "$model: no $keyname" 
     return
   fi
-  IFS=";" read -r keytype keyopt <<< "${KITBASH_MODEL_STRUCTURE["${keyname}"]}"
+  IFS=";" read -ra keytype keyopt <<< "${KITBASH_MODEL_STRUCTURE["${keyname}"]}"
   log.debug "$keytype $keyopt"
   if [[ "$keytype" == "array" ]]; then
-    IFS="," read -r vals <<< "${KITBASH_MODELS["${model}__${keyname}"]}"
+    IFS="," read -ra vals <<< "${KITBASH_MODELS["${model}__${keyname}"]}"
     log.debug "$model: ${#vals[@]}"
     for val in "${vals[@]}"; do
       log.debug "model: $val"

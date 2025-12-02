@@ -13,9 +13,9 @@ else
     https://github.com/aurynn/babashka /opt/kitbash > /dev/null 2>&1
 fi
 [[ -e /usr/bin/babashka ]] || \
-  sudo ln -s /opt/babashka/bin/babashka /usr/bin/babashka
+  sudo ln -s /opt/kitbash/bin/babashka /usr/bin/babashka
 [[ -e /usr/bin/kitbash ]] || \
-  sudo ln -s /opt/babashka/bin/babashka /usr/bin/kitbash
+  sudo ln -s /opt/kitbash/bin/babashka /usr/bin/kitbash
 
 [[ -d /etc/kitbash ]] || \
   sudo mkdir -p /etc/kitbash

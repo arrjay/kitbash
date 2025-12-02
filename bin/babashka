@@ -470,7 +470,7 @@ __kitbash_load_kit() {
     # the KITBASH_KITS[$kit__] namespace should now be populated
     if [[ -v KITBASH_KITS["${kit}__depends"] ]]; then
       # Let's iterate over loading the kits
-      IFS="," read -r dependencies <<< "${KITBASH_KITS["${kit}__depends"]}"
+      IFS="," read -ra dependencies <<< "${KITBASH_KITS["${kit}__depends"]}"
       for dep in "${dependencies[@]}"; do
         log.debug "Loading $kit dependency $dep"
         __kitbash_load_kit "$dep"
@@ -565,7 +565,7 @@ __kitbash_load_model() {
     log.debug "Found model kits: ${KITBASH_MODELS["${name}__inherits"]}"
     local dependencies
     # These are all read in as CSV to make later parsing easier
-    IFS="," read -r dependencies <<< "${KITBASH_MODELS["${name}__inherits"]}"
+    IFS="," read -ra dependencies <<< "${KITBASH_MODELS["${name}__inherits"]}"
     local dep
     for dep in "${dependencies[@]}"; do
       log.debug "Attempting to load inherited model '$dep'"
@@ -584,7 +584,7 @@ __kitbash_load_model() {
     log.debug "Found model kits: ${KITBASH_MODELS["${name}__kits"]}"
     local dependencies
     # These are all read in as CSV to make later parsing easier
-    IFS="," read -r dependencies <<< "${KITBASH_MODELS["${name}__kits"]}"
+    IFS="," read -ra dependencies <<< "${KITBASH_MODELS["${name}__kits"]}"
     local dep
     for dep in "${dependencies[@]}"; do
       log.debug "Attempting to load kit '$dep'"
@@ -607,7 +607,7 @@ kitbash.apply_inherited() {
     log.debug "Found model inheritance: ${KITBASH_MODELS["${model}__inherits"]}"
     local dependencies
     # These are all read in as CSV to make later parsing easier
-    IFS="," read -r dependencies <<< "${KITBASH_MODELS["${model}__inherits"]}"
+    IFS="," read -ra dependencies <<< "${KITBASH_MODELS["${model}__inherits"]}"
     local dep
     for dep in "${dependencies[@]}"; do
       log.debug "Attempting to apply model '$dep'"

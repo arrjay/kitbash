@@ -3,6 +3,7 @@
   "description": "Inherited model",
   "version": "1.0.0",
   "kits": [
+    "pgdg",
     "postgres"
   ],
   "entrypoint": "model.inherited.apply",

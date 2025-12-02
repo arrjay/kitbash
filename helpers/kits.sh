@@ -31,10 +31,10 @@ kitbash.kit.key() {
     log.debug "$kit: no $keyname" 
     return
   fi
-  IFS=";" read -r keytype keyopt <<< "${KITBASH_KIT_STRUCTURE["${keyname}"]}"
+  IFS=";" read -ra keytype keyopt <<< "${KITBASH_KIT_STRUCTURE["${keyname}"]}"
   
   if [[ "$keytype" == "array" ]]; then
-    IFS="," read -r vals <<< "${KITBASH_KITS["${kit}__${keyname}"]}"
+    IFS="," read -ra vals <<< "${KITBASH_KITS["${kit}__${keyname}"]}"
     log.debug "$kit: ${#vals[@]}"
     for val in "${vals[@]}"; do
       log.debug "kit: $val"
