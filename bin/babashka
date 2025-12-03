@@ -792,7 +792,7 @@ __babashka_main() {
           __kitbash_load_model "$model"
           local m var v
           for m in "${KITBASH_ORDERED_MODELS[@]}"; do
-            emit header $(str.color bold underline -- "$m")
+            emit header $(str.color bold underline -- "Model: $m")
             #
             __incr
             #
@@ -821,7 +821,7 @@ __babashka_main() {
             if ! kitbash.model.has_key "$m" secrets; then
               emit info "No secrets..."
             else
-              for var in $(kitbash.model.secrets "$m"); do
+              for var in $(kitbash.model "$m" secrets); do
                 if ! v=$(info.var.secret "$var"); then
                   emit error $(str.color bold bg-red -- "$var")
                 else
@@ -836,25 +836,28 @@ __babashka_main() {
             if ! kitbash.model.has_key "$m" kits; then
               emit info "No kits..."
             else
-              for kit in "$(kitbash.model.kits "$m")"; do
+              for kit in $(kitbash.model "$m" kits); do
                 emit header $(str.color underline -- "$kit")
                 __incr
                 if ! kitbash.kit.has_key "$kit" variables; then
                   emit info "No variables..."
-                  continue
+                else
+                  __incr
+                  for var in $(kitbash.kit "$kit" variables); do
+                    log.debug "$var"
+                    v=$(info.var "$var" missing)
+                    if [[ "$v" == "missing" ]]; then
+                      emit error $(str.color bold bg-red -- "$var")
+                    else
+                      emit ok "$var: $v"
+                    fi
+                  done
+                  __decr
                 fi
-                for var in $(kitbash.kit.variables "$kit"); do
-                  v=$(info.var "$var" missing)
-                  if [[ "$v" == "missing" ]]; then
-                    emit error $(str.color bold bg-red -- "$var")
-                  else
-                    emit ok "$var: $v"
-                  fi
-                done
-                __decr
-                emit header $(str.color italic underline -- "Secrets")
+                # __decr
+                emit header $(str.color italic underline -- "secrets")
                 __incr
-                for var in $(kitbash.kit.secrets "$m"); do
+                for var in $(kitbash.kit "$kit" secrets); do
                   if ! v=$(info.var.secret "$var"); then
                     emit error $(str.color bold bg-red -- "$var")
                   else
@@ -862,9 +865,11 @@ __babashka_main() {
                   fi
                 done
                 __decr
+                __decr
               done
               __decr
             fi
+            __decr
             __decr
           done
           # Then lists out all the secrets, and whether or not they can be

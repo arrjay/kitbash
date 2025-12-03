@@ -15,7 +15,7 @@ kitbash.kit.has_key() {
   [[ -v KITBASH_KITS["${1}__${2}"] ]]
 }
 
-kitbash.kit.key() {  
+kitbash.kit() {  
   local model keyname keys ary keytype keyopt vals
   
   # Grab all the keys out
@@ -47,14 +47,23 @@ kitbash.kit.key() {
 
 kitbash.kit.variables() {
   log.debug "$1"
-  kitbash.kit.key "$1" variables
+  local val
+  for val in $(kitbash.kit "$1" variables); do
+    echo "$val"
+  done
 }
 
 kitbash.kit.depends() {
   log.debug "$1"
-  kitbash.kit.key "$1" inherits
+  local val
+  for val in $(kitbash.kit "$1" depends); do
+    echo "$val"
+  done
 }
 kitbash.kit.secrets() {
   log.debug "$1"
-  kitbash.kit.key "$1" secrets
+  local val
+  for val in $(kitbash.kit "$1" secrets); do
+    echo "$val"
+  done
 }

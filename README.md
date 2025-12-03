@@ -1,11 +1,15 @@
-A [babushka][1] like clone, written in bash.
+## Kitbash
+
+Kitbash is a fork of [babashka](https://github.com/aurynn/babashka), a [babushka][1] like clone, written in bash, originally by [richo](https://github.com/richo).
 
 ## Installing
 
-Clone this repo to the location of your choice, and add `babashka/bin` to your path.
+The included [bootstrap.sh] script will install Kitbash on Debian-alike systems.
+
+Clone this repo to the location of your choice, and add `kitbash/bin` to your path.
 
 ```bash
-git clone https://github.com/aurynn/babashka
+git clone https://github.com/aurynn/babashka 
 echo "export PATH=$PWD/babashka/bin:\${PATH}" >>.bashrc
 ```
 
@@ -13,38 +17,40 @@ or, to install system-wide,
 
 ```bash
 cd /opt
-sudo git clone https://github.com/aurynn/babashka
-sudo mkdir /etc/babashka
-cd /etc/babashka
-sudo ln -s /opt/babashka/dependencies .
-sudo ln -s /opt/babashka/helpers .
-sudo ln -s /opt/babashka/bin/babashka /usr/bin/babashka
+sudo git clone https://github.com/aurynn/kitbash
+sudo mkdir /etc/kitbash
+cd /etc/kitbash
+sudo ln -s /opt/kitbash/dependencies .
+sudo ln -s /opt/kitbash/helpers .
+sudo ln -s /opt/kitbash/bin/kitbash /usr/bin/kitbash
 ```
 
 
 ## Organising dependencies
 
-`babashka` looks for dependencies by searching the `./babashka/`, `./babashka/dependencies/` and `/etc/babashka/dependencies` folders for files ending in `.bash` or `.sh`.
+`kitbash` looks for dependencies by searching the `./kitbash/`, `./kitbash/dependencies/` and `/etc/kitbash/provisioners` folders for files ending in `.bash` or `.sh`.
 
-Project-specific dependencies are conventionally kept in `./babashka/` and global dependencies are conventionally kept in `/etc/babashka/dependencies`.
+Project-specific dependencies are conventionally kept in `./kitbash/` and global dependencies are conventionally kept in `/etc/kitbash/provisioners`.
 
-For example, `~/projects/myapp/babashka/deploy.sh` might contain deployment scripts for an app called `myapp`, while `/etc/babashka/dependencies/packages.sh` might contain dependencies which install packages you commonly need on new systems.
+Files to be copied to the filesystem are kept in a subdirectory named `files/`, which will not be processed.
+
+For example, `~/projects/myapp/kitbash/deploy.sh` might contain deployment scripts for an app called `myapp`, while `/etc/kitbash/provisioners/packages.sh` might contain dependencies which install packages you commonly need on new systems.
 
 ## Custom dependency directories
 
-`babashka` takes an argument, `-d`, to add another search path for dependencies.
+`kitbash` takes an argument, `-d`, to add another search path for dependencies.
 
 ## Files
 
-Babashka will ignore anything in subdirectories named `files/`. This is to allow for files that will be moved into the filesystem to be included in a Babashka directory tree.
+kitbash will ignore anything in subdirectories named `files/`. This is to allow for files that will be moved into the filesystem to be included in a kitbash directory tree.
 
 ## Built-ins
 
-Babashka comes with a number of built-in functions to make developing your infrastructure-as-code easier. Documentation (in-progress) for these builtins is in [docs/README.md](docs/README.md).
+kitbash comes with a number of built-in functions to make developing your infrastructure-as-code easier. Documentation (in-progress) for these builtins is in [docs/README.md](docs/README.md).
 
 ## Templating
 
-`babashka` comes with a built-in, `system.file.template`, which takes advantage of [Mo](https://github.com/tests-always-included/mo). This is an optional dependency.
+`kitbash` comes with the built-in `system.file.template`, which takes advantage of [Mo](https://github.com/tests-always-included/mo). This is an optional dependency.
 
 ## Writing dependencies
 
@@ -97,11 +103,11 @@ Then invoke:
 
 ```bash
 
-babashka zsh_installed
-babashka mysql_environment
+kitbash zsh_installed
+kitbash mysql_environment
 ```
 
-## What people are saying about babashka
+## What people are saying about kitbash
 
 "This is absolutely f**king cursed"
 ~ [@ryankurte](https://twitter.com/ryankurte)
