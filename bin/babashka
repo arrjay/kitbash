@@ -42,15 +42,15 @@ KITBASH_SECRETS_PATHS=(
 declare -a KITBASH_PROVISIONER_PATHS
 # Defines the dependency paths. Always loaded after the main libraries.
 KITBASH_PROVISIONER_PATHS=(
-  /etc/kitbash/provisioners
-  /etc/kitbash/local
   ./kitbash
   ./.kitbash
+  /etc/kitbash/provisioners
+  /etc/kitbash/local
   # Deprecated but still useable
-  /etc/babashka/dependencies
-  /etc/babashka/local
   ./babashka
   ./.babashka
+  /etc/babashka/dependencies
+  /etc/babashka/local
 )
 
 declare -a KITBASH_KIT_PATHS
@@ -444,7 +444,7 @@ __kitbash_load_kit() {
     return 1
   fi
   if contains __KITBASH_KIT_TREE_STACK "$kit"; then
-    log.error "Cycle detected: $kit"
+    emit error "Cycle detected: $kit"
     return 1
   fi
   types.set.append __KITBASH_KIT_TREE_STACK "$kit"
@@ -787,9 +787,12 @@ __babashka_main() {
           # Validate a model
           # Lists out all variables that are listed in all the kits, and
           # whether or not they can be found via info.var
+          # TODO
+          # - Fix this, this is stupid
           model="$2"
           log.debug "Validate $model"
           __kitbash_load_model "$model"
+          KITBASH_CURRENT_MODEL="$model"
           local m var v
           for m in "${KITBASH_ORDERED_MODELS[@]}"; do
             emit header $(str.color bold underline -- "Model: $m")

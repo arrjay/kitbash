@@ -5,6 +5,10 @@ kitbash.vars.register_resolver kitbash.vars.files.general append
 # Load from secrets variables files
 kitbash.vars.secrets.register_resolver kitbash.vars.files.secret
 
+# declare -ag __KITBASH_CHECKED_FILES
+declare -g __KITBASH_LOAD_FILES
+__KITBASH_LOAD_FILES=1
+
 # kitbash.vars.files.general
 # Usage: kitbash.vars.files.general NAME
 # Reloads all the variables files in __KITBASH_VARIABLES_PATH in ascending
@@ -18,16 +22,25 @@ kitbash.vars.files.general() {
   # Does not currently recurse
   # TODO: Add recursion?
   
+  # Only try to load the files on the first go, no point wasting cycles doing
+  # it again
+  log.debug "Files loader attempting to load files: '$__KITBASH_LOAD_FILES'"
+  if [[ "$__KITBASH_LOAD_FILES" == 1 ]]; then
   # Uses a nameref to the variable paths array
-  for fn in $(kitbash.vars.files.list KITBASH_VARIABLE_PATHS); do
-    log.debug "Checking file '$fn'"
-    for line in $(kitbash.vars.files.read "$fn"); do
-      kitbash.vars.files.cache "$line"
+    for fn in $(kitbash.vars.files.list KITBASH_VARIABLE_PATHS); do
+      log.debug "Checking file '$fn'"
+      for line in $(kitbash.vars.files.read "$fn"); do
+        kitbash.vars.files.cache "$line"
+      done
     done
-  done
+    __KITBASH_LOAD_FILES=0
+  fi
+  
   if [[ -v __KITBASH_VAR_CACHE["$name"] ]]; then
     echo "${__KITBASH_VAR_CACHE["$name"]}"
+    return
   fi
+  return 1
 }
 
 kitbash.vars.files.list() {
@@ -38,14 +51,25 @@ kitbash.vars.files.list() {
   for directory in "${paths[@]}"; do
     models_d="$directory"/"$KITBASH_MODELS_DIRECTORY_NAME"
     log.debug "Using models directory $models_d"
-    for model in "${KITBASH_MODEL_INHERITANCE[@]}"; do
-      log.debug "checking existence of $models_d/$model"
-      if [[ -d "$models_d/$model" ]]; then
-        log.debug "Adding '$models_d/$model'"
-        search_paths+=("$models_d/$model")
+    
+    # The first model loaded is the model we're examining, always.
+    # Then it proceeds down the tree to subsequent models, to see if they have
+    # defined any variable files, to allow for models to provide a default
+    # definition for any given variable.
+    for model in "${__KITBASH_MODEL_TREE_STACK[@]}"; do
+      model_path="$models_d/$KITBASH_CURRENT_MODEL"
+      # If a current model is defined, we want to scope our variable lookups
+      # to that.
+      # That means we'll either load up a file with the model's name AND/OR
+      # all the files in the directory with the model's name.
+      
+      if [[ -e "$model_path" && -d "$model_path" ]]; then
+        search_paths+=("$model_path")
       fi
+      # Now, look in the models.d directory for any files named for the model
+      # we're looking at.
       for suffix in "${KITBASH_VARIABLE_SUFFIXES[@]}"; do
-        log.debug "Checking for suffixed files"
+        log.debug "Checking for suffixed model files matching '$model'"
         fn="$models_d"/"$model"."$suffix"
         log.debug "Checking '$fn'"
         if [[ -e "$fn" ]]; then
@@ -111,6 +135,8 @@ kitbash.vars.files.cache() {
     key="${BASH_REMATCH[1]}"
     val="${BASH_REMATCH[2]}"
     log.debug "Found key: $key"
+    # Only load into cache if it's not already been found.
+    # If it has, we can ignore it.
     if ! [[ -v __KITBASH_VAR_CACHE["$key"] ]]; then
       log.debug "Adding to cache: '$key'='$val"
       __KITBASH_VAR_CACHE["$key"]="$val"

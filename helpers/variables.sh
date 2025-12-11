@@ -101,7 +101,7 @@ kitbash.vars.load() {
   log.debug "Resolvers: ${__KITBASH_VAR_RESOLVERS[@]}"
   for resolver in "${__KITBASH_VAR_RESOLVERS[@]}"; do
     log.debug "Using resolver: '${resolver}'"
-    if declare -F "$resolver" >/dev/null 2>&1; then
+    if declare -F "$resolver" > /dev/null 2>&1; then
       log.debug "'$resolver' is a defined function."
       value="$("$resolver" "$name")" || true
       if [[ -n "$value" ]]; then
