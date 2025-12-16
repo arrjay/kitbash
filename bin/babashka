@@ -756,6 +756,8 @@ __babashka_main() {
           # Support more than one model being applied
           model="$2"
           __kitbash_load_model "$model"
+          # Initialize the vars system
+          kitbash.vars.init
           log.debug "Applying all kits"
           kitbash.apply_kits || kitbash.fail "Failed to apply kits."
           log.debug "Applying model '$model'"
@@ -788,11 +790,13 @@ __babashka_main() {
           # Lists out all variables that are listed in all the kits, and
           # whether or not they can be found via info.var
           # TODO
-          # - Fix this, this is stupid
+          # - Fix this, this is. just. bad code.
           model="$2"
           log.debug "Validate $model"
           __kitbash_load_model "$model"
           KITBASH_CURRENT_MODEL="$model"
+          # Run init
+          kitbash.vars.init
           local m var v
           for m in "${KITBASH_ORDERED_MODELS[@]}"; do
             emit header $(str.color bold underline -- "Model: $m")
@@ -879,9 +883,10 @@ __babashka_main() {
           # found.
           ;;
         *)
-        # Original path, so that we don't break prior functionality
-        __babashka_invoke "$1"
-        ;;
+          # Original path, so that we don't break prior functionality
+          kitbash.vars.init
+          __babashka_invoke "$1"
+          ;;
       esac
     else
       __babashka_usage

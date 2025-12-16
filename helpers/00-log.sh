@@ -237,6 +237,6 @@ emit.indented() {
   esac
   # Emit enabled is down here so that we still attempt to log out
   [[ "$EMIT_ENABLED" -eq 0 ]] && return 0
-  printf "%*s"  "$indent"
-  printf "%s %s\n" "$icon" "$msg"
+  printf "%*s"  "$indent" >&$__log_fd
+  printf "%s %s\n" "$icon" "$msg" >&$__log_fd
 }

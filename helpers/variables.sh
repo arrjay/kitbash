@@ -9,8 +9,10 @@
 declare -ag __KITBASH_VAR_RESOLVERS
 declare -ag __KITBASH_VAR_SECRET_RESOLVERS
 
+declare -ag __KITBASH_VAR_RESOLVERS_INIT
+
 declare -Ag __KITBASH_VAR_CACHE
-declare __KITBASH_LOAD_VARIABLES
+declare -g __KITBASH_LOAD_VARIABLES
 __KITBASH_LOAD_VARIABLES=0
 
 # info.var
@@ -29,8 +31,11 @@ info.var() {
     return 1
   }
   
+  # This is still wrong.
+  # TODO: Fix this, since it'll cause weirdness later on with variable providers that aren't "load everything" style.
+  
   log.debug "Searching for variable: '$name'"
-  if [[ "${__KITBASH_LOAD_VARIABLES}" -eq 0 ]]; then
+  if (( __KITBASH_LOAD_VARIABLES == 0 )); then
     log.debug "kitbash loading variables..."
     value=$(kitbash.vars.load "$name")
     [[ -n "$value" ]] && {
@@ -175,5 +180,30 @@ kitbash.__export() {
   done
 }
 
+kitbash.vars.init.register() {
+  local function
+  function="$1"
+  log.debug "Registering init: '${function}'"
+  local mode
+  mode="${2:-prepend}"
+  case "$mode" in
+    prepend)
+      log.debug "Prepending '${function}'"
+      types.set.prepend __KITBASH_VAR_RESOLVERS_INIT "$function"
+      ;;
+    append|*)
+      log.debug "Appending '${function}'"
+      types.set.append __KITBASH_VAR_RESOLVERS_INIT "$function"
+      ;;
+  esac
+}
+
+kitbash.vars.init() {
+  local init
+  for init in "${__KITBASH_VAR_RESOLVERS_INIT[@]}"; do
+    log.debug "Calling $init"
+    "$init"
+  done
+}
 
 kitbash.load variables/files.sh

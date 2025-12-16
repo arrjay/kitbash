@@ -1,41 +1,39 @@
 # Variables file loader
 
 # Load from general variables files
-kitbash.vars.register_resolver kitbash.vars.files.general append
+kitbash.vars.register_resolver kitbash.vars.files.lookup append
+# The variables init, since it assumes that it'll be caching.
+kitbash.vars.init.register kitbash.vars.files.init
 # Load from secrets variables files
-kitbash.vars.secrets.register_resolver kitbash.vars.files.secret
+kitbash.vars.secrets.register_resolver kitbash.vars.files.secret append
 
 # declare -ag __KITBASH_CHECKED_FILES
-declare -g __KITBASH_LOAD_FILES
-__KITBASH_LOAD_FILES=1
+# declare -g __KITBASH_LOAD_FILES
+# __KITBASH_LOAD_FILES=1
+
+kitbash.vars.files.init() {
+  local fn line key val directory
+  
+  for fn in $(kitbash.vars.files.list KITBASH_VARIABLE_PATHS); do
+    log.debug "Checking file '$fn'"
+    for line in $(kitbash.vars.files.read "$fn"); do
+      log.debug "Caching line $line"
+      kitbash.vars.files.cache "$line"
+    done
+  done
+}
 
 # kitbash.vars.files.general
 # Usage: kitbash.vars.files.general NAME
 # Reloads all the variables files in __KITBASH_VARIABLES_PATH in ascending
 # lexical order into the private hash __KITBASH_VAR_CACHE.
 # Takes NAME to provide an interface for info.var lookup
-kitbash.vars.files.general() {
+kitbash.vars.files.lookup() {
   local name
   name="$1"
-  local fn line key val directory
-  log.debug "Searching for variable: '$name'"
-  # Does not currently recurse
-  # TODO: Add recursion?
   
-  # Only try to load the files on the first go, no point wasting cycles doing
-  # it again
-  log.debug "Files loader attempting to load files: '$__KITBASH_LOAD_FILES'"
-  if [[ "$__KITBASH_LOAD_FILES" == 1 ]]; then
-  # Uses a nameref to the variable paths array
-    for fn in $(kitbash.vars.files.list KITBASH_VARIABLE_PATHS); do
-      log.debug "Checking file '$fn'"
-      for line in $(kitbash.vars.files.read "$fn"); do
-        kitbash.vars.files.cache "$line"
-      done
-    done
-    __KITBASH_LOAD_FILES=0
-  fi
-  
+  log.debug "Checking '$name'"
+  log.debug "${__KITBASH_VAR_CACHE["$name"]}" 
   if [[ -v __KITBASH_VAR_CACHE["$name"] ]]; then
     echo "${__KITBASH_VAR_CACHE["$name"]}"
     return
@@ -98,11 +96,11 @@ kitbash.vars.files.secret() {
   name="$1"
   local fn line key val directory
   log.debug "Searching for key: '$name'"
-  if [[ "${KITBASH_SECRET_PATHS[@]}" == 0 ]]; then
+  if [[ "${KITBASH_SECRET_PATHS[@]}" == "0" ]]; then
     log.error "No secret paths defined!"
     kitbash.fail
   fi
-  for fn in $(kitbash.vars.files.list KITBASH_SECRET_PATHS); do
+  for fn in $(kitbash.vars.files.list KITBASH_SECRETS_PATHS); do
     log.debug "Searching in '$fn'"
     for line in $(kitbash.vars.files.read "$fn"); do
       # I wish there was a better way to do this.
@@ -116,7 +114,7 @@ kitbash.vars.files.secret() {
       fi
     done
   done
-  log.error "No such secret '$name'"
+  emit error "No such secret '$name'"
   return 1
 }
 
