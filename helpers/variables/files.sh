@@ -55,14 +55,15 @@ kitbash.vars.files.list() {
     # defined any variable files, to allow for models to provide a default
     # definition for any given variable.
     for model in "${__KITBASH_MODEL_TREE_STACK[@]}"; do
-      model_path="$models_d/$KITBASH_CURRENT_MODEL"
+      log.debug "Adding '$model' to search path"
+      model_path="$models_d/$model"
       # If a current model is defined, we want to scope our variable lookups
       # to that.
       # That means we'll either load up a file with the model's name AND/OR
       # all the files in the directory with the model's name.
       
       if [[ -e "$model_path" && -d "$model_path" ]]; then
-        search_paths+=("$model_path/$KITBASH_CURRENT_MODEL")
+        search_paths+=("$model_path")
       fi
       # Now, look in the models.d directory for any files named for the model
       # we're looking at.

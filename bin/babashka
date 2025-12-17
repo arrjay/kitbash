@@ -597,6 +597,8 @@ __kitbash_load_model() {
   else
     log.debug "No kits found for $name"
   fi
+  # Finally, parse in the model itself
+  __babashka_load_deps_from_path "$path"
 }
 
 kitbash.apply_inherited() {
