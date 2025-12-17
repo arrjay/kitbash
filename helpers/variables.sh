@@ -39,7 +39,7 @@ info.var() {
     log.debug "kitbash loading variables..."
     value=$(kitbash.vars.load "$name")
     [[ -n "$value" ]] && {
-      echo "$value"
+      printf '%s' "$value"
       __KITBASH_LOAD_VARIABLES=1
       return 0
     }
@@ -49,13 +49,13 @@ info.var() {
   if [[ -n "${__KITBASH_VAR_CACHE["$name"]+x}" ]]; then
     log.debug "info.var: cache hit for '$name'"
     log.debug "Value: ${__KITBASH_VAR_CACHE["$name"]}"
-    echo "${__KITBASH_VAR_CACHE["$name"]}"
+    printf '%s' "${__KITBASH_VAR_CACHE["$name"]}"
     return 0
   fi
   # 3. Default / error
   if [[ -n "$default" ]]; then
     log.debug "info.var: returning default for '$name'"
-    echo "$default"
+    printf '%s' "$default"
     return 0
   fi
 
