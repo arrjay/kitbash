@@ -62,7 +62,7 @@ kitbash.vars.files.list() {
       # all the files in the directory with the model's name.
       
       if [[ -e "$model_path" && -d "$model_path" ]]; then
-        search_paths+=("$model_path")
+        search_paths+=("$model_path/$KITBASH_CURRENT_MODEL")
       fi
       # Now, look in the models.d directory for any files named for the model
       # we're looking at.

@@ -101,7 +101,7 @@ system.file.template() {
   
   is_met() {
     # Basic existence and mode settings
-    "$status" || return "$status"
+    [[ "$status" == "0" ]] || return "$status"
     std.file.check "$_file_name" \
       source "$tmp" \
       group "${_group:-root}" \
@@ -110,7 +110,7 @@ system.file.template() {
 
   }
   meet() {
-    "$status" || return "$status"
+    [[ "$status" == "0" ]] || return "$status"
     std.file.update "$_file_name" \
       source "$tmp" \
       group "${_group:-root}" \

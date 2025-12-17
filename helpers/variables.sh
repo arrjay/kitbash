@@ -163,21 +163,12 @@ kitbash.vars.secrets.register_resolver() {
 }
 
 
-# External interface for exporting variables
+# TODO
+# Move this to a function that exports a set of variables out to a file, so
+# that that file can then be used by Mo dynamically, instead of a series of
+# info.var calls throughout the templates.
 kitbash.export() {
-  eval "$(kitbash.__export "$@")"
-}
-
-# Internal function
-# Generates a list of printf statements to create local -x scoped variables,
-# so that `mo` can source variables from the environment as expected during
-# its run.
-kitbash.__export() {
-  local name value
-  for name in "$@"; do
-    value="$(info::var "$name")" || return 1
-    printf 'local -x %s=%q\n' "$name" "$value"
-  done
+  return 1
 }
 
 kitbash.vars.init.register() {
