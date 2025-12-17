@@ -14,7 +14,7 @@ std.file.matches() {
     emit error "$2 is a directory"
     return 1
   }
-  /usr/bin/diff --new-file "$1" "$2" > /dev/null &2>1
+  /usr/bin/diff --new-file "$1" "$2" > /dev/null 2&>1
 }
 
 std.file.has_content() {
