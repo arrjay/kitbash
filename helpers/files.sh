@@ -5,7 +5,16 @@ bb.file.content.match() {
 }
 
 std.file.matches() {
-  /usr/bin/diff "$1" "$2"
+  # Both files need to be files, not directories
+  [[ -d "$1" ]] && {
+    emit error "$1 is a directory"
+    return 1
+  }
+  [[ -d "$2" ]] && {
+    emit error "$2 is a directory"
+    return 1
+  }
+  /usr/bin/diff --new-file "$1" "$2" > /dev/null &2>1
 }
 
 std.file.has_content() {
@@ -42,8 +51,6 @@ std.file.check() {
   if [[ -n "${options["contents"]}" ]]; then
     log.debug "testing contents"
     std.file.has_content "$_filename" "${options["contents"]}" || return 1
-    
-    
   else
     log.debug "testing source"
     std.file.matches "$_filename" "${options["source"]}" || return 1
