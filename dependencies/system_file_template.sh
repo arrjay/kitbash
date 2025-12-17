@@ -78,29 +78,49 @@ system.file.template() {
     echo "${_file_name}"
   }
   
-  mo_cmd="/usr/bin/mo -u -x --fail-on-file --allow-function-arguments ${sources[@]} $_template"
   # Strip all unnecessary whitespace
-  mo_cmd=$(normalize "$mo_cmd")
-  local contents
-  contents="$("$mo_cmd")"
+  # mo_cmd=$(normalize "$mo_cmd")
+  local contents status tmp
+  local orig_umask
+  orig_umask=$(umask)
+  mo_cmd=(/usr/bin/mo -u -x --fail-on-file --allow-function-arguments "${sources[@]}" "$_template")
+  
+  umask 077
+  tmp=$(mktemp "$_file_name".tmpl.XXXXXXXX) || {
+    umask "$orig_umask"
+    kitbash.fail "Could not create template tmpfile"
+  }
+  umask "$orig_umask"
+  
+  if "${mo_cmd[@]}" >"$tmp"; then
+    # contents="$(<"$tmp")"
+    status=0
+  else
+    status=$?
+  fi
   
   is_met() {
     # Basic existence and mode settings
+    "$status" || return "$status"
     std.file.check "$_file_name" \
-      contents "$contents" \
+      source "$tmp" \
       group "${_group:-root}" \
       owner "${_owner:-root}" \
       mode "${_mode:-644}" || return 1
 
   }
   meet() {
-    
+    "$status" || return "$status"
     std.file.update "$_file_name" \
-      contents "$contents" \
+      source "$tmp" \
       group "${_group:-root}" \
       owner "${_owner:-root}" \
       mode "${_mode:-644}" || return 1
       
+  }
+  finally() {
+    log.debug "Finally"
+    rm -f "$tmp"
   }
   process "${FUNCNAME[0]}" "$_file_name"
 }

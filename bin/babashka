@@ -252,6 +252,7 @@ process() {
         
         process_meet
         process_is_met || __babashka_fail "dependency didn't converge"
+        declare -F finally > /dev/null 2>&1 && finally
       else
         __babashka_log '`- dry run, skipping...'
         # __babashka_log '  
@@ -260,9 +261,12 @@ process() {
     __decr
     # If get_id exists we want to unset it so that we don't get
     # odd behaviours across invocations where it's not yet implemented.
-    if type get_id &> /dev/null; then
-      unset -f get_id
-    fi
+    local extensions=(get_id finally)
+    for ext in "${extensions[@]}"; do
+      if declare -F "$ext" > /dev/null 2>&1; then
+        unset -f "$ext"
+      fi
+    done
 }
 
 process_is_met() {
