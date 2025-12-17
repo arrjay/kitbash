@@ -20,7 +20,7 @@ std.file.matches() {
 
 std.file.has_content() {
   log.debug "testing $1 for $2"
-  printf '%s' "$2" | diff - "$1" > /dev/null 2>&1
+  printf '%s\n' "$2" | diff - "$1" > /dev/null 2>&1
   local result="$?"
   log.debug "got result $result"
   return "$result"
