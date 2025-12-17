@@ -177,7 +177,7 @@ kitbash.str.normalise() {
   local raw="$1"
   # Collapse all whitespace to single spaces
   local value
-  value="$(echo "$raw" | tr -s '[:space:]' ' ')"
+  value="$(printf '%s' "$raw" | tr -s '[:space:]' ' ')"
   value="${value#"${value%%[![:space:]]*}"}" # Trim leading whitespace
   value="${value%"${value##*[![:space:]]}"}" # ... and trailing
   echo "$value"

@@ -14,12 +14,13 @@ std.file.matches() {
     emit error "$2 is a directory"
     return 1
   }
-  /usr/bin/diff --new-file "$1" "$2" > /dev/null 2&>1
+  /usr/bin/diff --new-file "$1" "$2" > /dev/null 2>&1 && return 0
+  return 1
 }
 
 std.file.has_content() {
   log.debug "testing $1 for $2"
-  /bin/echo "$2" | diff "$1" -
+  printf '%s' "$2" | diff - "$1" > /dev/null 2>&1
   local result="$?"
   log.debug "got result $result"
   return "$result"
@@ -86,7 +87,7 @@ std.file.update() {
   elif [[ -n "${options["contents"]}" ]]; then
     log.debug "updating file by tee"
     # Do it quietly
-    /bin/echo "${options["contents"]}" | /usr/bin/tee "$tmpfn" > /dev/null
+    printf '%s\n' "${options["contents"]}" | /usr/bin/tee "$tmpfn" > /dev/null
   else
     # Fail
     log.debug "neither source nor options set?"

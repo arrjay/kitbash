@@ -11,7 +11,9 @@ system.file.template() {
   # t: template
   
   # Declare the array that'll hold our values
-  local _vararray=()
+  # local _vararray=()
+  local -a sources
+  local -a vararray
   while getopts "g:o:m:t:s:" opt; do
     case "$opt" in
       g)
@@ -28,7 +30,7 @@ system.file.template() {
         #     TODO: Allow it to fall through?
         # Allows for multiple variable files to be used
         
-        _vararray+=( $OPTARG );;
+        vararray+=( $OPTARG );;
     esac
   done
   unset OPTIND
@@ -48,25 +50,26 @@ system.file.template() {
   fi
   
   local _variables=""
-  for var in "${_vararray[@]}"; do 
+  for var in "${vararray[@]}"; do 
     if ! [[ -e "$var" ]]; then
       __babashka_fail "${FUNCNAME[0]}: variable source file $var does not exist."
     fi
-    _variables="${_variables} -s=$var";
+    sources+=("-s=$var")
   done
   
   # Find all the Mo helpers so we can inject them as sources
   # Assumes, based on using the default installer, that any helpers
   #   will be in /etc/babashka/helpers/mo.
   # TODO: Make this configurable?
-  local __helper __helpers
-  __helpers=""
+  local helper
+  
   local pth dir
   for pth in "${KITBASH_LIBRARY_PATHS[@]}"; do
     dir="$pth/mo"
     if [[ -e "$dir" && -d "$dir" ]]; then
-      for __helper in $(find "$dir" -name "*.sh"); do
-        __helpers="${__helpers} -s=${__helper}"
+      for helper in $(find "$dir" -name "*.sh"); do
+        # __helpers="-s=${__helper} ${__helpers}"
+        sources+=("-s=$helper")
       done
     fi
   done
@@ -75,42 +78,29 @@ system.file.template() {
     echo "${_file_name}"
   }
   
+  mo_cmd="/usr/bin/mo -u -x --fail-on-file --allow-function-arguments ${sources[@]} $_template"
+  # Strip all unnecessary whitespace
+  mo_cmd=$(normalize "$mo_cmd")
+  local contents
+  contents="$("$mo_cmd")"
+  
   is_met() {
     # Basic existence and mode settings
-    ! [[ -e "$_file_name" ]] && return 1
+    std.file.check "$_file_name" \
+      contents "$contents" \
+      group "${_group:-root}" \
+      owner "${_owner:-root}" \
+      mode "${_mode:-644}" || return 1
 
-    if [[ -n "$_group" ]]; then
-      path.has_gid "$_file_name" "$_group" || return 1
-    fi
-    if [[ -n "$_owner" ]]; then
-      path.has_uid "$_file_name" "$_owner" || return 1
-    fi
-    if [[ -n "$_mode" ]]; then
-      path.has_mode "$_file_name" "$_mode" || return 1
-    fi
-    # Ensure the contents are what we expect them to be
-    # Since this is using a templating engine, we have to render out the
-    # template in order to compare it to the on-disk file
-    # so let's get rendering
-    # I think we have to assume that variables have been set?
-    
-    # Okay so if we want to support multiple variables files,
-    # we need to force $_variables into an array? I think?
-    
-    # -u: fail on unset variables
-    # -x: fail when functions return nonzero status codes
-    # -f: fail if files don't exist
-
-    /usr/bin/mo -u -x --fail-on-file --allow-function-arguments "${__helpers}" "${_variables}" "$_template" | $__babashka_sudo diff "$_file_name" -
   }
   meet() {
-
-    # Overwrite the file
-    /usr/bin/mo -u -x --fail-on-file --allow-function-arguments "${__helpers}" "${_variables}" "$_template" | $__babashka_sudo tee "$_file_name"
-    # Change these settings, if needed
-    [[ -n "$_mode" ]] && $__babashka_sudo chmod "$_mode" "$_file_name"
-    [[ -n "$_owner" ]] && $__babashka_sudo chown "$_owner" "$_file_name"
-    [[ -n "$_group" ]] && $__babashka_sudo chgrp "$_group" "$_file_name"
+    
+    std.file.update "$_file_name" \
+      contents "$contents" \
+      group "${_group:-root}" \
+      owner "${_owner:-root}" \
+      mode "${_mode:-644}" || return 1
+      
   }
   process "${FUNCNAME[0]}" "$_file_name"
 }
