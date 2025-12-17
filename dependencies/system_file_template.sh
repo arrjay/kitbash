@@ -59,16 +59,23 @@ system.file.template() {
   # Assumes, based on using the default installer, that any helpers
   #   will be in /etc/babashka/helpers/mo.
   # TODO: Make this configurable?
-  local __helpers=""
-  for __helper in $(find /etc/babashka/helpers/mo -name "*.sh"); do
-    __helpers="${__helpers} -s=${__helper}"
+  local __helper __helpers
+  __helpers=""
+  local pth dir
+  for pth in "${KITBASH_LIBRARY_PATHS[@]}"; do
+    dir="$pth/mo"
+    if [[ -e "$dir" && -d "$dir"]]; then
+      for __helper in $(find "$dir" -name "*.sh"); do
+        __helpers="${__helpers} -s=${__helper}"
+      done
+    fi
   done
   
-  function get_id() {
+  get_id() {
     echo "${_file_name}"
   }
   
-  function is_met() {
+  is_met() {
     # Basic existence and mode settings
     ! [[ -e "$_file_name" ]] && return 1
 
@@ -96,7 +103,7 @@ system.file.template() {
 
     /usr/bin/mo -u -x --fail-on-file --allow-function-arguments "${__helpers}" "${_variables}" "$_template" | $__babashka_sudo diff "$_file_name" -
   }
-  function meet() {
+  meet() {
 
     # Overwrite the file
     /usr/bin/mo -u -x --fail-on-file --allow-function-arguments "${__helpers}" "${_variables}" "$_template" | $__babashka_sudo tee "$_file_name"
