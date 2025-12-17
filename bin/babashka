@@ -444,7 +444,7 @@ __kitbash_load_kit() {
     return 1
   fi
   if contains __KITBASH_KIT_TREE_STACK "$kit"; then
-    emit error "Cycle detected: $kit"
+    emit error "Kit already loaded (possible cycle?): $kit"
     return 1
   fi
   types.set.append __KITBASH_KIT_TREE_STACK "$kit"

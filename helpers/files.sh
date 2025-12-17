@@ -75,7 +75,7 @@ std.file.update() {
   
   if [[ -n "${options["source"]}" ]]; then
     log.debug "updating file by source"
-    /usr/bin/cp "${options["source"]}" "$_filename"
+    /usr/bin/cp "${options["source"]}" "$tmpfn"
   elif [[ -n "${options["contents"]}" ]]; then
     log.debug "updating file by tee"
     # Do it quietly
