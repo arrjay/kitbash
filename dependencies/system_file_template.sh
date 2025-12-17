@@ -64,7 +64,7 @@ system.file.template() {
   local pth dir
   for pth in "${KITBASH_LIBRARY_PATHS[@]}"; do
     dir="$pth/mo"
-    if [[ -e "$dir" && -d "$dir"]]; then
+    if [[ -e "$dir" && -d "$dir" ]]; then
       for __helper in $(find "$dir" -name "*.sh"); do
         __helpers="${__helpers} -s=${__helper}"
       done
