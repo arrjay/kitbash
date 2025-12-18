@@ -368,6 +368,6 @@ kitbash.file() {
     fi
   done
   
-  log.error "Could not find file: $request_path"
+  emit error "Could not find file: $request_path"
   return 1
 }
