@@ -687,13 +687,13 @@ kitbash.ensure() {
   local provisioner identifier
   provisioner="$1"
   identifier="$2"
-  log::debug "Checking for ensured $provisioner:$identifier"
+  log.debug "Checking for ensured $provisioner:$identifier"
   if [[ -v __KITBASH_ENSURED["$provisioner:$identifier"] ]]; then
-    log::debug "Found"
+    log.debug "Found"
     return 0
   fi
-  log::debug "Not found"
-  log::error "Could not find ensure for $provisioner:$identifier."
+  log.debug "Not found"
+  log.error "Could not find ensure for $provisioner:$identifier."
   return 1
 }
 
