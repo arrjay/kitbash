@@ -656,12 +656,19 @@ kitbash.apply_kits() {
 }
 
 kitbash.apply() {
-  local model
+  local model entrypoint
   model="$1"
   
   if [[ -z "${KITBASH_MODELS["${model}__entrypoint"]}" ]]; then
-    log.error "Model entrypoint not defined: $model"
-    return 1
+    emit warn "Model entrypoint not defined: $model"
+    emit warn "Attempting to use default model.$model.apply"
+    if declare -f model."$model".apply > /dev/null 2>&1; then
+      entrypoint=model."$model".apply
+    else
+      kitbash.fail "Entrypoint not defined and no default: $model"
+    fi
+  else
+    entrypoint="${KITBASH_MODELS["${model}__entrypoint"]}"
   fi
   # Add ourself to the inheritance list
   types.set.append KITBASH_MODEL_INHERITANCE "$model"
@@ -679,8 +686,8 @@ kitbash.apply() {
   # kitbash.apply_kits || kitbash.fail "Failed to apply kits."
   __decr
   
-  log.debug "Attempting to invoke ${KITBASH_MODELS["${model}__entrypoint"]}"
-  __babashka_invoke "${KITBASH_MODELS["${model}__entrypoint"]}"
+  log.debug "Attempting to invoke $entrypoint"
+  __babashka_invoke "$entrypoint" || kitbash.fail
 }
 
 kitbash.ensure() {
