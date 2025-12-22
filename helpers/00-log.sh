@@ -89,7 +89,7 @@ log.__write() {
   
   local context
   context="$(log.__callsite)"
-  [[ -n "$KITBASH_CONTEXT" ]] && 
+  [[ -n "${KITBASH_CONTEXT+x}" ]] && 
     context="$context $KITBASH_CONTEXT"
   
   # printf '%s %s [%s] %s\n' \

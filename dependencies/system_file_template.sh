@@ -1,6 +1,10 @@
 # A templated file
 # Expects/needs a template renderer of some variety
 
+# Brings in the template renderer, if it's been installed to the expected
+# location.
+# Needed so we can run functions in the templates.
+[[ -e /usr/bin/mo && -f /usr/bin/mo ]] && . /usr/bin/mo
 
 system.file.template() {
   # path to manage
@@ -83,7 +87,12 @@ system.file.template() {
   local contents status tmp
   local orig_umask
   orig_umask=$(umask)
-  mo_cmd=(/usr/bin/mo -u -x --fail-on-file --allow-function-arguments "${sources[@]}" "$_template")
+  log.debug mo -u -x --fail-on-file --allow-function-arguments "${sources[@]}" "$_template"
+  
+  # Use `mo` instead of /usr/bin/mo so that it uses the sourced-in function
+  # for Mo instead of trying to shell out. This is so that Mo has access to
+  # our internal functions for info.var and info.var.secret.
+  mo_cmd=(mo -u -x --fail-on-function --fail-on-file --allow-function-arguments "${sources[@]}" "$_template"
   
   umask 077
   tmp=$(mktemp "$_file_name".tmpl.XXXXXXXX) || {
