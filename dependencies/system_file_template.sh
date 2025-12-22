@@ -92,7 +92,7 @@ system.file.template() {
   # Use `mo` instead of /usr/bin/mo so that it uses the sourced-in function
   # for Mo instead of trying to shell out. This is so that Mo has access to
   # our internal functions for info.var and info.var.secret.
-  mo_cmd=(mo -u -x --fail-on-function --fail-on-file --allow-function-arguments "${sources[@]}" "$_template"
+  mo_cmd=(mo -u -x --fail-on-function --fail-on-file --allow-function-arguments "${sources[@]}" "$_template")
   
   umask 077
   tmp=$(mktemp "$_file_name".tmpl.XXXXXXXX) || {
