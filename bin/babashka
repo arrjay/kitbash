@@ -685,7 +685,7 @@ kitbash.apply() {
   __incr
   kitbash.apply_inherited "$model" || kitbash.fail "Failed to apply inherited models."
   # Remove ourself from the inheritance list
-  types.set.pop KITBASH_MODEL_INHERITANCE "$model"
+  array.pop KITBASH_MODEL_INHERITANCE "$model"
   # kitbash.apply_kits || kitbash.fail "Failed to apply kits."
   __decr
   
