@@ -128,7 +128,8 @@ system.file.template() {
       
   }
   finally() {
-    log.debug "Finally"
+    log.debug "Removing temporary file"
+    emit apply "Removing temporary file"
     rm -f "$tmp"
   }
   process "${FUNCNAME[0]}" "$_file_name"

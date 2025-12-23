@@ -258,6 +258,9 @@ process() {
         # __babashka_log '  
       fi
     fi
+    if declare -F finally > /dev/null 2>&1; then
+      finally
+    fi
     __decr
     # If get_id exists we want to unset it so that we don't get
     # odd behaviours across invocations where it's not yet implemented.
