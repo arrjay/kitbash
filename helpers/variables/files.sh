@@ -109,7 +109,7 @@ kitbash.vars.files.secret() {
         key="${BASH_REMATCH[1]}"
         val="${BASH_REMATCH[2]}"
         if [[ "$key" == "$name" ]]; then
-          echo "$val"
+          printf '%s' "$val"
           return 0
         fi
       fi
