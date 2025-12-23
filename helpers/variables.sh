@@ -75,7 +75,7 @@ info.var.secret() {
     log.debug "Checking resolver '$resolver'"
     val=$("$resolver" "$name")
     if [[ -n "$val" ]]; then
-      echo "$val"
+      printf '%s' "$val"
       return 0
     fi
   done
