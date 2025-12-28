@@ -20,11 +20,12 @@ docker.image() {
   }
   function is_met() {
 
-    if ! /usr/bin/docker inspect "$_image" 2>/dev/null | jq -e -r '.[0].Id'; then
+    if ! docker inspect --format '{{.Id}}' "$_image" 2>/dev/null; then
       return 1
     fi
-    LOCAL_SHA=$(/usr/bin/docker inspect "$_image" 2>/dev/null | jq -r '.[0].RepoDigests[0]' | cut -d '@' -f2)
-    REMOTE_SHA=$(/usr/bin/skopeo inspect docker://"$_image" 2>/dev/null| jq -r '.Digest')
+    # LOCAL_SHA=$(/usr/bin/docker inspect "$_image" 2>/dev/null | jq -r '.[0].RepoDigests[0]' | cut -d '@' -f2)
+    LOCAL_SHA=$(/usr/bin/docker inspect --format '{{.Id}}' "$_image" 2> /dev/null)
+    REMOTE_SHA=$(/usr/bin/skopeo inspect --format '{{.Digest}}' docker://"$_image" 2>/dev/null)
 
     if [[ "$LOCAL_SHA" != "$REMOTE_SHA" ]]; then
       return 1
