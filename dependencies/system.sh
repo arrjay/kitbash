@@ -35,7 +35,7 @@ function system.group() {
       local -a cmd
       cmd=(addgroup "$_group_name")
       [[ -n "$gid" ]] && cmd=("${cmd[@]}" "--gid" "$gid")
-      "${cmd[@]}"
+      "${cmd[@]}" > /dev/null
     fi
   }
   process
@@ -98,13 +98,13 @@ function system.user() {
       [[ $(getent passwd "${_user_name}" | awk -F ':' '{print $4}') == "$_gid" ]] || return 1
     fi
 
-    if [[ "$uid" != "" ]]; then
+    if [[ -n "$uid" ]]; then
       [[ $(getent passwd "${_user_name}" | awk -F ':' '{print $3}') == "$uid" ]] || return 1
     fi
-    if [[ "$shell" != "" ]]; then
+    if [[ -n "$shell" ]]; then
       [[ $(getent passwd "${_user_name}" | awk -F ':' '{print $7}') == "$shell" ]] || return 1
     fi
-    if [[ "$homedir" != "" ]]; then
+    if [[ -n "$homedir" ]]; then
       [[ $(getent passwd "${_user_name}" | awk -F ':' '{print $6}') == "$homedir" ]] || return 1
     fi
     # TODO
@@ -123,23 +123,37 @@ function system.user() {
         _gid="$gid"
         ;;
     esac
+    local -a cmd
     if getent passwd "${_user_name}" ; then
       # User already exists, so we're modifying the user
-      usermod \
-        "${_gid:+-g "$_gid"}" \
-        "${uid:+-u "$uid"}" \
-        "${shell:+-s "$shell"}" \
-        "${homedir:+-d "$homedir"}" \
-        "${_user_name}"
+      cmd=(usermod)
+      [[ -n "$_gid" ]] && cmd+=(-g "$_gid")
+      [[ -n "$uid" ]] && cmd+=(-u "$uid")
+      [[ -n "$shell" ]] && cmd+=(-s "$shell")
+      [[ -n "$homedir" ]] && cmd+=(-d "$homedir")
+      cmd+=("$_user_name")
+      # usermod \
+      #   "${_gid:+-g "$_gid"}" \
+      #   "${uid:+-u "$uid"}" \
+      #   "${shell:+-s "$shell"}" \
+      #   "${homedir:+-d "$homedir"}" \
+      #   "${_user_name}"
     else
       # User doesn't exist, create it
-      useradd \
-        "${_gid:+-g "$_gid"} \"
-        "${uid:+-u "$uid"} \"
-        "${homedir:+-d "$homedir" -m}" \
-        "${shell:+-s "$shell"}" \
-        "${_user_name}"
+      cmd=(useradd)
+      [[ -n "$_gid" ]] && cmd+=(-g "$_gid")
+      [[ -n "$uid" ]] && cmd+=(-u "$uid")
+      [[ -n "$shell" ]] && cmd+=(-s "$shell")
+      [[ -n "$homedir" ]] && cmd+=(-d "$homedir")
+      cmd+=("$_user_name")
+      # useradd \
+      #   "${_gid:+-g "$_gid"}" \
+      #   "${uid:+-u "$uid"}" \
+      #   "${homedir:+-d "$homedir" -m}" \
+      #   "${shell:+-s "$shell"}" \
+      #   "${_user_name}"
     fi
+    "${cmd[@]}" > /dev/null
   }
   process
 }
