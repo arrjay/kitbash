@@ -18,20 +18,22 @@ system.file() {
     ["-c|--contents;string"]=""
   )
   
+  local group owner mode _source contents
+  
   declare -a XOR=( "--source,--contents" )
   
   while getopts "g:o:m:s:c:" opt; do
     case "$opt" in
       g)
-        local group=$(echo $OPTARG | xargs);;
+        group=$(echo $OPTARG | xargs);;
       o)
-        local owner=$(echo $OPTARG | xargs);;
+        owner=$(echo $OPTARG | xargs);;
       m)
-        local mode=$(echo $OPTARG | xargs);;
+        mode=$(echo $OPTARG | xargs);;
       s)
-        local _source=$(echo $OPTARG | xargs);;
+        _source=$(echo $OPTARG | xargs);;
       c)
-        local contents=$(echo $OPTARG | xargs);;
+        contents=$(echo $OPTARG | xargs);;
     esac
   done
   unset OPTIND
@@ -41,62 +43,48 @@ system.file() {
   get_id() {
     echo "${_file_name}"
   }
-
+  
   is_met() {
     # __babashka_log "file name: $_file_name"
-    ! [[ -e "$_file_name" ]] && return 1
-
-    if [[ -n "$group" ]]; then
-      path.has_gid "$_file_name" "$group" || return 1
-    fi
-    if [[ -n "$owner" ]]; then
-      path.has_uid "$_file_name" "$owner" || return 1
-    fi
-    if [[ -n "$mode" ]]; then
-      path.has_mode "$_file_name" "$mode" || return 1
-    fi
-    # Okay the basic mode stuff is set up properly
-    # (though ideally this'd be a helper function instead of C&P from system.directory)
-    # TODO I guess?
-    # Okay anyway check contents now
-
+    
     if [[ -n "${_source}" ]]; then
-      # okay we're using source
-      # We might need sudo privs to read the file
-      $__babashka_sudo diff "$_file_name" "$_source"
-      return $?
+      
+      std.file.check "$_file_name" \
+        source "$_source" \
+        mode "$mode" \
+        owner "$owner" \
+        group "$group"
+      
     elif [[ -n "$contents" ]]; then
-      # Use contents
-      # We might need sudo privs to read the file
-      echo "$contents" | $__babashka_sudo diff "$_file_name" -
-      return "$?"
+      std.file.check "$_file_name" \
+        contents "$contents" \
+        mode "$mode" \
+        owner "$owner" \
+        group "$group"
+        
     else
       # that's an error, at least one of these needs to be set
-      __babashka_fail "${FUNCNAME[0]} $_file_name: one of source or contents must be set"
+      kitbash.fail "$_file_name: one of source or contents must be set"
     fi
     return 0
   }
   meet() {
     if [[ -n "${_source}" ]]; then
-      $__babashka_sudo cp "$_source" "$_file_name"
+      
+      std.file.update "$_file_name" \
+        source "$_source" \
+        mode "$mode" \
+        owner "$owner" \
+        group "$group"
+      
     elif [[ -n "$contents" ]]; then
-      # Do it quietly
-      echo "$contents" | $__babashka_sudo tee "$_file_name" > /dev/null
-    else
-      # Fail
-      return 1;
+      std.file.update "$_file_name" \
+        contents "$contents" \
+        mode "$mode" \
+        owner "$owner" \
+        group "$group"
+        
     fi
-    
-    if [[ -n "$mode" ]]; then 
-      $__babashka_sudo chmod "$mode" "$_file_name" || return 1
-    fi
-    if [[ -n "$owner" ]]; then 
-      $__babashka_sudo chown "$owner" "$_file_name" || return 1
-    fi
-    if [[ -n "$group" ]]; then 
-      $__babashka_sudo chgrp "$group" "$_file_name" || return 1
-    fi
-    return 0
   }
   process
 }

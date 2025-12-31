@@ -25,35 +25,35 @@ teardown() {
   unset KITBASH_MODEL_INHERITANCE
 }
 
-@test "kitbash.vars.files.general caches basic files" {
+@test "kitbash.vars.files.lookup caches basic files" {
   # KITBASH_LOG_LEVEL=0
   KITBASH_VARIABLE_PATHS=("$DIR/variables/basic")
-  run kitbash.vars.files.general "GREETING"
+  run kitbash.vars.files.lookup "GREETING"
   assert_output "hello"
 }
 
-@test "kitbash.vars.files.general uses reverse lexical sort for files" {
+@test "kitbash.vars.files.lookup uses reverse lexical sort for files" {
   KITBASH_VARIABLE_PATHS=("$DIR/variables/basic")
-  run kitbash.vars.files.general "DEPARTURE"
+  run kitbash.vars.files.lookup "DEPARTURE"
   assert_output "departed"
 }
 
-@test "kitbash.vars.files.general model script file overrides" {
+@test "kitbash.vars.files.lookup model script file overrides" {
   # KITBASH_LOG_LEVEL=0
   KITBASH_VARIABLE_PATHS=("$DIR/variables/basic" "$DIR/variables/with_model_script")
   KITBASH_MODEL_INHERITANCE=(modelname)
   KITBASH_CURRENT_MODEL=modelname
-  run kitbash.vars.files.general "GREETING"
+  run kitbash.vars.files.lookup "GREETING"
   assert_output "modelname"
 }
 
-@test "kitbash.vars.files.general model directory overrides" {
+@test "kitbash.vars.files.lookup model directory overrides" {
   # KITBASH_LOG_LEVEL=0
   
   KITBASH_MODEL_INHERITANCE=(modelname)
   KITBASH_VARIABLE_PATHS=("$DIR/variables/basic" "$DIR/variables/with_model_dir")
   KITBASH_CURRENT_MODEL=modelname
-  run kitbash.vars.files.general "GREETING"
+  run kitbash.vars.files.lookup "GREETING"
   assert_output "modelname_directory"
 }
 
