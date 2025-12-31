@@ -19,6 +19,10 @@ system.file() {
   )
   
   local group owner mode _source contents
+  # Set defaults
+  group=root
+  owner=root
+  mode="644"
   
   declare -a XOR=( "--source,--contents" )
   
@@ -54,6 +58,7 @@ system.file() {
         mode "$mode" \
         owner "$owner" \
         group "$group"
+      return $?
       
     elif [[ -n "$contents" ]]; then
       std.file.check "$_file_name" \
@@ -61,7 +66,7 @@ system.file() {
         mode "$mode" \
         owner "$owner" \
         group "$group"
-        
+      return $?
     else
       # that's an error, at least one of these needs to be set
       kitbash.fail "$_file_name: one of source or contents must be set"
@@ -76,6 +81,7 @@ system.file() {
         mode "$mode" \
         owner "$owner" \
         group "$group"
+      return $?
       
     elif [[ -n "$contents" ]]; then
       std.file.update "$_file_name" \
@@ -83,7 +89,7 @@ system.file() {
         mode "$mode" \
         owner "$owner" \
         group "$group"
-        
+      return $?
     fi
   }
   process
