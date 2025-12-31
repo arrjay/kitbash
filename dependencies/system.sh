@@ -32,7 +32,10 @@ function system.group() {
     if getent group "$_group_name" > /dev/null; then
       groupmod -g "$gid" $_group_name
     else
-      addgroup "$_group_name" "${gid:+-gid $gid}"
+      local -a cmd
+      cmd=(addgroup "$_group_name")
+      [[ -n "$gid" ]] && cmd=("${cmd[@]}" "--gid" "$gid")
+      "${cmd[@]}"
     fi
   }
   process
