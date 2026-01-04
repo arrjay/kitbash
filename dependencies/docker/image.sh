@@ -19,14 +19,15 @@ docker.image() {
     echo "${_image}"
   }
   function is_met() {
-
-    if ! docker inspect --format '{{.Id}}' "$_image" 2>/dev/null; then
+    emit i "Checking image existence"
+    if ! docker inspect --format '{{.Id}}' "$_image" > /dev/null 2>&1 ; then
       return 1
     fi
-    # LOCAL_SHA=$(/usr/bin/docker inspect "$_image" 2>/dev/null | jq -r '.[0].RepoDigests[0]' | cut -d '@' -f2)
+    emit i "Fetching local SHA"
     LOCAL_SHA=$(/usr/bin/docker inspect --format '{{.Id}}' "$_image" 2> /dev/null)
-    REMOTE_SHA=$(/usr/bin/skopeo inspect --format '{{.Digest}}' docker://"$_image" 2>/dev/null)
-
+    emit i "Fetching remote SHA"
+    REMOTE_SHA=$(/usr/bin/skopeo inspect --format '{{.Digest}}' docker://"$_image" 2> /dev/null)
+    
     if [[ "$LOCAL_SHA" != "$REMOTE_SHA" ]]; then
       return 1
     fi
@@ -34,7 +35,7 @@ docker.image() {
   }
   function meet() {
     # Apparently docker pull has decided to be noisy
-    /usr/bin/docker pull -q "$_image" 2>/dev/null
+    /usr/bin/docker pull -q "$_image" > /dev/null 2>&1
   }
   process
 }

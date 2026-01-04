@@ -67,6 +67,7 @@ system.file.template() {
   # TODO: Make this configurable?
   local helper
   
+  # TODO: Move this out of the function, since it only needs to run once
   local pth dir
   for pth in "${KITBASH_LIBRARY_PATHS[@]}"; do
     dir="$pth/mo"
