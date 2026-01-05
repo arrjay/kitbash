@@ -201,11 +201,11 @@ emit.indented() {
   # [[ -n "$KITBASH_CONTEXT" ]] && printf "[%s] " "$KITBASH_CONTEXT"
   local icon
   case "$level" in
-    header)
+    header|h)
       icon="$(str.color bold -- "##")"
       log.info emit header "$msg"
       ;;
-    apply)
+    apply|a)
       icon="$(str.color bright-blue bold -- "→")"
       log.info emit apply "$msg"
       ;;
@@ -217,15 +217,15 @@ emit.indented() {
       icon="$(str.color bright-yellow bold -- o)"
       log.info emit apply "$msg"
       ;;
-    error)
+    error|e)
       icon="$(str.color red -- ✗)"
       log.error emit error "$msg"
       ;;
-    info)
+    info|i)
       icon="$(str.color bold -- i)"
       log.info emit info "$msg"
       ;;
-    notice)
+    notice|n)
       icon="$(str.color dim yellow -- n)"
       log.info emit notice "$msg"
       ;;

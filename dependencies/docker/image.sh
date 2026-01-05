@@ -23,9 +23,9 @@ docker.image() {
     if ! docker inspect --format '{{.Id}}' "$_image" > /dev/null 2>&1 ; then
       return 1
     fi
-    emit i "Fetching local SHA"
+    emit info "Fetching local SHA"
     LOCAL_SHA=$(/usr/bin/docker inspect --format '{{.Id}}' "$_image" 2> /dev/null)
-    emit i "Fetching remote SHA"
+    emit info "Fetching remote SHA"
     REMOTE_SHA=$(/usr/bin/skopeo inspect --format '{{.Digest}}' docker://"$_image" 2> /dev/null)
     
     if [[ "$LOCAL_SHA" != "$REMOTE_SHA" ]]; then
