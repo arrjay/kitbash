@@ -1,9 +1,11 @@
 kitbash.load ./system/__init__.sh
 
 function system.group() {
-  _group_name=$1; shift
+  local group_name gid
+  group_name="$1"
+  shift
 
-  __babashka_log "== ${FUNCNAME[0]} $_group_name"
+  __babashka_log "== ${FUNCNAME[0]} $group_name"
   while getopts "g:" opt; do
     case "$opt" in
       # echoing through xargs trims whitespace
@@ -15,25 +17,25 @@ function system.group() {
   unset OPTIND
   unset OPTARG
   function get_id() {
-    echo "${_group_name}"
+    echo "${group_name}"
   }
   function is_met() {
-    if ! getent group "$_group_name" > /dev/null; then
+    if ! getent group "$group_name" > /dev/null; then
       return 1
     fi
     if [[ -n "$gid" ]]; then
-      current_gid=$(getent group "${_group_name}" | awk -F ':' '{print $3}')
+      current_gid=$(getent group "${group_name}" | awk -F ':' '{print $3}')
       if [[ "$current_gid" != "$gid" ]]; then
         return 1
       fi
     fi
   }
   function meet() {
-    if getent group "$_group_name" > /dev/null; then
-      groupmod -g "$gid" $_group_name
+    if getent group "$group_name" > /dev/null; then
+      groupmod -g "$gid" $group_name
     else
       local -a cmd
-      cmd=(addgroup "$_group_name")
+      cmd=(addgroup "$group_name")
       [[ -n "$gid" ]] && cmd=("${cmd[@]}" "--gid" "$gid")
       "${cmd[@]}" > /dev/null
     fi
@@ -42,8 +44,9 @@ function system.group() {
 }
 
 function system.user() {
-
-  _user_name="$1"; shift
+  local user_name gid uid homedir shell is_system
+  user_name="$1"
+  shift
   # g: gid or group name
   # u: uid
   # s: system
@@ -69,18 +72,18 @@ function system.user() {
   # Reset the option parsing
   unset OPTIND
   unset OPTARG
-  __babashka_log "== ${FUNCNAME[0]} $_user_name"
+  __babashka_log "== ${FUNCNAME[0]} $user_name"
   if [[ "$is_system" == "true" ]]; then
     unset $homedir
   fi
   
   function get_id() {
-    echo "${_user_name}"
+    echo "${user_name}"
   }
   
   function is_met() {
     # User exists?
-    getent passwd "${_user_name}" > /dev/null || return 1
+    getent passwd "${user_name}" > /dev/null || return 1
     # Group ID is correct?
     if [[ -n "$gid" ]]; then
       case $gid in
@@ -95,17 +98,17 @@ function system.user() {
           _gid="$gid"
           ;;
       esac
-      [[ $(getent passwd "${_user_name}" | awk -F ':' '{print $4}') == "$_gid" ]] || return 1
+      [[ $(getent passwd "${user_name}" | awk -F ':' '{print $4}') == "$_gid" ]] || return 1
     fi
 
     if [[ -n "$uid" ]]; then
-      [[ $(getent passwd "${_user_name}" | awk -F ':' '{print $3}') == "$uid" ]] || return 1
+      [[ $(getent passwd "${user_name}" | awk -F ':' '{print $3}') == "$uid" ]] || return 1
     fi
     if [[ -n "$shell" ]]; then
-      [[ $(getent passwd "${_user_name}" | awk -F ':' '{print $7}') == "$shell" ]] || return 1
+      [[ $(getent passwd "${user_name}" | awk -F ':' '{print $7}') == "$shell" ]] || return 1
     fi
     if [[ -n "$homedir" ]]; then
-      [[ $(getent passwd "${_user_name}" | awk -F ':' '{print $6}') == "$homedir" ]] || return 1
+      [[ $(getent passwd "${user_name}" | awk -F ':' '{print $6}') == "$homedir" ]] || return 1
     fi
     # TODO
     # Implement -s, since I'm not sure what that should do
@@ -123,35 +126,20 @@ function system.user() {
         _gid="$gid"
         ;;
     esac
+    
     local -a cmd
-    if getent passwd "${_user_name}" ; then
+    [[ -n "$_gid" ]] && cmd+=(-g "$_gid")
+    [[ -n "$uid" ]] && cmd+=(-u "$uid")
+    [[ -n "$shell" ]] && cmd+=(-s "$shell")
+    [[ -n "$homedir" ]] && cmd+=(-d "$homedir")
+    cmd+=("$user_name")
+    
+    if getent passwd "${user_name}" ; then
       # User already exists, so we're modifying the user
-      cmd=(usermod)
-      [[ -n "$_gid" ]] && cmd+=(-g "$_gid")
-      [[ -n "$uid" ]] && cmd+=(-u "$uid")
-      [[ -n "$shell" ]] && cmd+=(-s "$shell")
-      [[ -n "$homedir" ]] && cmd+=(-d "$homedir")
-      cmd+=("$_user_name")
-      # usermod \
-      #   "${_gid:+-g "$_gid"}" \
-      #   "${uid:+-u "$uid"}" \
-      #   "${shell:+-s "$shell"}" \
-      #   "${homedir:+-d "$homedir"}" \
-      #   "${_user_name}"
+      cmd=(usermod "${cmd[@]}")
     else
       # User doesn't exist, create it
-      cmd=(useradd)
-      [[ -n "$_gid" ]] && cmd+=(-g "$_gid")
-      [[ -n "$uid" ]] && cmd+=(-u "$uid")
-      [[ -n "$shell" ]] && cmd+=(-s "$shell")
-      [[ -n "$homedir" ]] && cmd+=(-d "$homedir")
-      cmd+=("$_user_name")
-      # useradd \
-      #   "${_gid:+-g "$_gid"}" \
-      #   "${uid:+-u "$uid"}" \
-      #   "${homedir:+-d "$homedir" -m}" \
-      #   "${shell:+-s "$shell"}" \
-      #   "${_user_name}"
+      cmd=(useradd "${cmd[@]}")
     fi
     "${cmd[@]}" > /dev/null
   }
