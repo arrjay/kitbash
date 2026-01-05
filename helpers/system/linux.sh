@@ -24,7 +24,7 @@ group.get_gid() {
   [[ -z "$grp" ]] && return 1
   
   local entry
-  entry=$(getent group "$grp") || {{
+  entry=$(getent group "$grp") || {
     log.debug "could not getent group $grp"
     return 1
   }
