@@ -32,8 +32,8 @@ group.get_gid() {
   
   # Bypass logic
   # If we're a number, we don't need to be looked up
-  if [[ "$gid" =~ ^[0-9]+$ ]]; then
-    printf '%s' "$gid"
+  if [[ "$grp" =~ ^[0-9]+$ ]]; then
+    printf '%s' "$grp"
     return 0
   fi
   
