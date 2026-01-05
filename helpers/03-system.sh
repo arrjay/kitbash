@@ -15,33 +15,36 @@ else
 fi
 
 path.has_uid() {
-  local _path="$1"
-  local _uid="$2"
+  local path uid owner value
+  path="$1"
+  uid="$2"
   # UID could be either a username _or_ a UID
   # So we should resolve that
-  local _owner=$(user.get_uid "$_uid") || return 1
+  owner=$(user.get_uid "$uid") || return 1
   # and now, check if it matches
-  local value=$(stat "$stat_flag" '%u' "${_path}") || return 1
-  [[ "$value" == "$_owner" ]]
+  value=$(stat "$stat_flag" '%u' "${path}") || return 1
+  [[ "$value" == "$owner" ]]
 }
 
 path.has_gid() {
-  local _path="$1"
-  local _gid="$2"
-  local _group=$(group.get_gid "$_gid") || return 1
-  local value=$(stat "$stat_flag" '%g' "${_path}") || return 1
-  [[ "$value" == "$_group" ]]
+  local path gid group
+  path="$1"
+  gid="$2"
+  group=$(group.get_gid "$gid") || return 1
+  local value=$(stat "$stat_flag" '%g' "${path}") || return 1
+  [[ "$value" == "$group" ]]
 }
 
 path.has_mode() {
-  local _path="$1"
-  local _mode="$2"
-  if [[ "${_mode:0:1}" == "0" ]]; then
+  local path mode
+  path="$1"
+  mode="$2"
+  if [[ "${mode:0:1}" == "0" ]]; then
     # Strip the leading 0, as it's implied
-    _mode="${_mode:1}"
+    mode="${mode:1}"
   fi
-  value=$(stat "$stat_flag" "$stat_mode_format" "${_path}") || return 1
-  [[ "$value" == "$_mode" ]]
+  value=$(stat "$stat_flag" "$stat_mode_format" "${path}") || return 1
+  [[ "$value" == "$mode" ]]
 }
 
 # OS-specific functions for get_uid and get_gid, to verify the existence of

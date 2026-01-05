@@ -1,28 +1,35 @@
 system.info.test "KERNEL" "linux" || return
 
 user.get_uid() {
-  local user="$1"
+  local user
+  user="$1"
   [[ -z "$user" ]] && return 1
   
   local entry
-  entry=$(getent passwd "$user") || return 1
+  entry=$(getent passwd "$user") || {
+    log.debug "could not getent passwd $user"
+    return 1
+  }
   
-  local _name _passwd _uid _gid _gecos _home _shell
-  IFS=':' read -r _name _passwd _uid _gid _gecos _home _shell <<< "$entry"
+  local name passwd uid gid gecos home shell
+  IFS=':' read -r name passwd uid gid gecos home shell <<< "$entry"
   
-  printf '%s' "$_uid"
+  printf '%s' "$uid"
 }
 
 group.get_gid() {
-  local _group_name="$1"
+  local grp name passwd gid members
+  grp="$1"
   
-  [[ -z "$_group_name" ]] && return 1
+  [[ -z "$grp" ]] && return 1
   
   local entry
-  entry=$(getent group "$_group_name") || return 1
+  entry=$(getent group "$grp") || {{
+    log.debug "could not getent group $grp"
+    return 1
+  }
+  IFS=':' read -r name passwd gid members <<< "$entry"
   
-  IFS=':' read -r _name _passwd _gid _members <<< "$entry"
-  
-  printf '%s' "$_gid"
+  printf '%s' "$gid"
 }
 
