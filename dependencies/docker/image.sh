@@ -40,7 +40,7 @@ docker.image() {
   }
   function meet() {
     # Apparently docker pull has decided to be noisy
-    /usr/bin/docker pull -q "$_image" > /dev/null 2>&1
+    /usr/bin/docker pull -q "$image" > /dev/null 2>&1
   }
   process
 }
