@@ -5,9 +5,11 @@
 # }
 
 docker.image() {
-  local _image=$1; shift
+  local image
+  image="$1"
+  shift
 
-  __babashka_log "== ${FUNCNAME[0]} $_image"
+  __babashka_log "== ${FUNCNAME[0]} $image"
   # this needs to verify that Docker is, in fact, installed
   if ! [[ -e /usr/bin/docker ]] && ! [[ -x /usr/bin/docker ]]; then
     # Error out, because we don't have Docker installed
@@ -16,19 +18,22 @@ docker.image() {
   # Don't bother resolving our pre-reqs until Docker is installed
   # requires docker.prerequisites.install
   function get_id() {
-    echo "${_image}"
+    echo "${image}"
   }
   function is_met() {
     emit i "Checking image existence"
-    if ! docker inspect --format '{{.Id}}' "$_image" > /dev/null 2>&1 ; then
+    if ! docker inspect --format '{{.Id}}' "$image" > /dev/null 2>&1 ; then
       return 1
     fi
     emit info "Fetching local SHA"
-    LOCAL_SHA=$(/usr/bin/docker inspect --format '{{.Id}}' "$_image" 2> /dev/null)
+    # LOCAL_SHA=$(/usr/bin/docker inspect --format '{{.Id}}' " 2> /dev/null)
+    LOCAL_SHA=$(/usr/bin/docker inspect --format '{{index .RepoDigests 0}}' "$image" 2> /dev/null | awk -F '@' '{print $2}')
     emit info "Fetching remote SHA"
-    REMOTE_SHA=$(/usr/bin/skopeo inspect --format '{{.Digest}}' docker://"$_image" 2> /dev/null)
+    REMOTE_SHA=$(/usr/bin/skopeo inspect --format '{{.Digest}}' docker://"$image" 2> /dev/null)
     
     if [[ "$LOCAL_SHA" != "$REMOTE_SHA" ]]; then
+      emit i "Local SHA is $LOCAL_SHA"
+      emit i "Remote SHA is $REMOTE_SHA"
       return 1
     fi
     return 0
