@@ -21,7 +21,13 @@ function system.directory() {
     echo "${directory}"
   }
   function is_met() {
-    if ! [[ -d "$directory" ]]; then
+    [[ -e "$directory" && ! -d "$directory" ]] || {
+      # There's a file with this name, which is clearly Bad, so we need to abort.
+      emit error "$directory is a file!"
+      return 1
+    }
+    
+    if ! [[ -f "$directory" && -d "$directory" ]]; then
       emit no "directory does not exist"
       return 1
     fi
@@ -47,20 +53,25 @@ function system.directory() {
   }
   function meet() {
     # Create parents automatically
+    [[ -e "$directory" && ! -d "$directory" ]] || {
+      # There's a file with this name, which is clearly Bad, so we need to abort.
+      emit error "$directory is a file!"
+      return 1
+    }
     ! [[ -d "$directory" ]] && mkdir -p "$directory" || {
       emit error "could not create directory"
       return 1
     }
     [[ -n "$mode" ]] && chmod "$mode" "$directory" || {
-      emit error "could not set mode"
+      emit error "could not set mode $mode on directory $directory."
       return 1
     }
     [[ -n "$owner" ]] && chown "$owner" "$directory" || {
-      emit error "could not set owner"
+      emit error "could not set owner $owner on directory $directory."
       return 1
     }
     [[ -n "$group" ]] && chgrp "$group" "$directory" || {
-      emit error "could not set group"
+      emit error "could not set group $group on directory $directory"
       return 1
     }
   }
