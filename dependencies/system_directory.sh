@@ -21,7 +21,7 @@ function system.directory() {
     echo "${directory}"
   }
   function is_met() {
-    [[ -e "$directory" && ! -d "$directory" ]] || {
+    [[ -e "$directory" && ! -d "$directory" ]] && {
       # There's a file with this name, which is clearly Bad, so we need to abort.
       emit error "$directory is a file!"
       return 1
@@ -53,7 +53,7 @@ function system.directory() {
   }
   function meet() {
     # Create parents automatically
-    [[ -e "$directory" && ! -d "$directory" ]] || {
+    [[ -e "$directory" && ! -d "$directory" ]] && {
       # There's a file with this name, which is clearly Bad, so we need to abort.
       emit error "$directory is a file!"
       return 1
