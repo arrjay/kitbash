@@ -27,7 +27,7 @@ function system.directory() {
       return 1
     }
     
-    if ! [[ -f "$directory" && -d "$directory" ]]; then
+    if ! [[ -e "$directory" && -d "$directory" ]]; then
       emit no "directory does not exist"
       return 1
     fi
