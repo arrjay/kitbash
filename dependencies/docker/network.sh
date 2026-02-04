@@ -16,21 +16,23 @@ docker.network.present() {
     echo "${_network}"
   }
   function is_met() {
-    HASH=$($__babashka_sudo /usr/bin/docker network ls -q -f "name=${_network}")
+    HASH="$(docker network ls -q -f "name=${_network}" 2>/dev/null)"
     # __babashka_log "found hash ${HASH}"
-    if [[ "$HASH " == " " ]]; then
+    if [[ -z "$HASH" ]]; then
       return 1
     fi
     return 0
   }
   function meet() {
-    $__babashka_sudo /usr/bin/docker network create ${_network}
+    docker network create "${_network}" > /dev/null 2>&1
   }
   process
 }
 
 docker.network.absent() {
-  local _network=$1; shift
+  local _network
+  _network=$1
+  shift
   __babashka_log "== ${FUNCNAME[0]} $_network"
   # this needs to verify that Docker is, in fact, installed
   if ! [[ -e /usr/bin/docker ]] && ! [[ -x /usr/bin/docker ]]; then
@@ -39,14 +41,14 @@ docker.network.absent() {
   fi
 
   function is_met() {
-    HASH=$($__babashka_sudo /usr/bin/docker network ls -q -f "name=${_network}")
-    if [[ "$HASH " != " " ]]; then
+    HASH="$(docker network ls -q -f "name=${_network}")"
+    if [[ -z "$HASH" ]]; then
       return 1
     fi
     return 0
   }
   function meet() {
-    $__babashka_sudo /usr/bin/docker network rm ${_network}
+    docker network rm "${_network}" > /dev/null 2>&1
   }
   process
 }
