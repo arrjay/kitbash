@@ -23,6 +23,7 @@ teardown() {
   unset __KITBASH_VAR_CACHE
   __KITBASH_LOAD_VARIABLES=0
   unset KITBASH_MODEL_INHERITANCE
+  unset __KITBASH_MODEL_TREE_STACK
 }
 
 @test "kitbash.vars.files.lookup caches basic files" {
@@ -41,7 +42,7 @@ teardown() {
 @test "kitbash.vars.files.lookup model script file overrides" {
   # KITBASH_LOG_LEVEL=0
   KITBASH_VARIABLE_PATHS=("$DIR/variables/basic" "$DIR/variables/with_model_script")
-  KITBASH_MODEL_INHERITANCE=(modelname)
+  __KITBASH_MODEL_TREE_STACK=(modelname)
   KITBASH_CURRENT_MODEL=modelname
   run kitbash.vars.files.lookup "GREETING"
   assert_output "modelname"
@@ -50,7 +51,7 @@ teardown() {
 @test "kitbash.vars.files.lookup model directory overrides" {
   # KITBASH_LOG_LEVEL=0
   
-  KITBASH_MODEL_INHERITANCE=(modelname)
+  __KITBASH_MODEL_TREE_STACK=(modelname)
   KITBASH_VARIABLE_PATHS=("$DIR/variables/basic" "$DIR/variables/with_model_dir")
   KITBASH_CURRENT_MODEL=modelname
   run kitbash.vars.files.lookup "GREETING"
@@ -73,7 +74,7 @@ teardown() {
 @test "info.var model script file overrides" {
   # KITBASH_LOG_LEVEL=0
   KITBASH_VARIABLE_PATHS=("$DIR/variables/basic" "$DIR/variables/with_model_script")
-  KITBASH_MODEL_INHERITANCE=(modelname)
+  __KITBASH_MODEL_TREE_STACK=(modelname)
   KITBASH_CURRENT_MODEL=modelname
   run info.var "GREETING"
   assert_output "modelname"

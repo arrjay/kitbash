@@ -2,20 +2,34 @@ function system.directory() {
   local directory owner group mode
   directory="$1"
   shift
-  while getopts "o:g:m:" opt; do
-    case "$opt" in
-      o)
-        local owner=$(echo $OPTARG | xargs);;
-      g)
-        local group=$(echo $OPTARG | xargs);;
-      m)
-        local mode=$(echo $OPTARG | xargs);;
-    esac
-  done
-  # Reset the option parsing
-  unset OPTIND
-  unset OPTARG
-  __babashka_log "== system.directory $_directory"
+  
+  declare -A OPTIONS=(
+    ["-m|--mode;mode"]="0755"
+    ["-o|--owner;string"]="root"
+    ["-g|--group;string"]="root"
+  )
+  
+  local -A options
+  
+  std.argparser options "$@" || return 1
+  owner="${options["--owner"]}"
+  group="${options["--group"]}"
+  mode="${options["--mode"]}"
+  
+  # while getopts "o:g:m:" opt; do
+  #   case "$opt" in
+  #     o)
+  #       local owner=$(echo "$OPTARG" | xargs);;
+  #     g)
+  #       local group=$(echo "$OPTARG" | xargs);;
+  #     m)
+  #       local mode=$(echo "$OPTARG" | xargs);;
+  #   esac
+  # done
+  # # Reset the option parsing
+  # unset OPTIND
+  # unset OPTARG
+  __babashka_log "== system.directory $directory"
   # TODO: Support not-Linux?
   function get_id() {
     echo "${directory}"
@@ -58,10 +72,12 @@ function system.directory() {
       emit error "$directory is a file!"
       return 1
     }
-    ! [[ -d "$directory" ]] && mkdir -p "$directory" || {
-      emit error "could not create directory"
-      return 1
-    }
+    if ! [[ -d "$directory" ]]; then
+      mkdir -p "$directory" || {
+        emit error "Could not create $directory"
+        return 1
+      }
+    fi
     [[ -n "$mode" ]] && chmod "$mode" "$directory" || {
       emit error "could not set mode $mode on directory $directory."
       return 1

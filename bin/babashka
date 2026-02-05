@@ -113,7 +113,7 @@ declare -ag __KITBASH_MODEL_TREE_STACK
 declare -a  __KITBASH_EXEC
 
 
-declare -A __KITBASH_ENSURED
+declare -Ag __KITBASH_ENSURED
 # Make system info a global value so that we can query it using the 
 #   system.info commands
 
@@ -239,14 +239,16 @@ process() {
     if ! process_is_met; then
       # Check if get_id is declared, so that we can log this in the 
       # __babashka_dirty array
-      if [[ -n "$__id" ]]; then
+      if [[ ! -z "$__id" ]]; then
         # The function we're in defined a get_id feature, so we can mark this
         # as a dirtied element so that later things can trigger on it
         # if they like.
         # This works because "process" is called at the end of the
         # convergence function, in order to trigger the "I should 
         # converge now" functionality.
-        __KITBASH_ENSURED["${FUNCNAME[1]}:${__id}"]="1"
+        local key
+        key="${FUNCNAME[1]}:${__id}"
+        __KITBASH_ENSURED["$key"]="1"
       fi
       if [[ "$__babashka_dry_run" == "no" ]]; then
         

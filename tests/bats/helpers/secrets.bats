@@ -21,25 +21,28 @@ teardown() {
   unset KITBASH_SECRET_PATHS
   unset KITBASH_CURRENT_MODEL
   unset KITBASH_MODEL_INHERITANCE
+  unset __KITBASH_MODEL_TREE_STACK
 }
 
 @test "info.var.secret returns present secret" {
   # KITBASH_LOG_LEVEL=0
-  KITBASH_SECRET_PATHS=("$DIR/variables/basic")
+  KITBASH_SECRETS_PATHS=("$DIR/variables/basic")
   run info.var.secret "GREETING"
   assert_output "hello"
 }
 
 @test "info.var.secret fails on missing" {
-  KITBASH_SECRET_PATHS=("$DIR/variables/basic")
+  KITBASH_SECRETS_PATHS=("$DIR/variables/basic")
   run info.var.secret "MISSING"
   assert_failure 1
 }
 
+# bats test_tags=override
 @test "info.var.secret model script file overrides" {
   # KITBASH_LOG_LEVEL=0
-  KITBASH_SECRET_PATHS=("$DIR/variables/basic" "$DIR/variables/with_model_script")
+  KITBASH_SECRETS_PATHS=("$DIR/variables/basic" "$DIR/variables/with_model_script")
   KITBASH_MODEL_INHERITANCE=(modelname)
+  __KITBASH_MODEL_TREE_STACK=(modelname)
   KITBASH_CURRENT_MODEL=modelname
   run info.var.secret "GREETING"
   assert_output "modelname"
