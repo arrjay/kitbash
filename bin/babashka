@@ -54,9 +54,13 @@ if [ $__babashka_trace = "yes" ]; then
     set -x
 fi
 
-__babashka_log() {
-    printf "%*s"  "$__babashka_current_indent" 1>&2
+__kitbash_log() {
+    printf "%*s"  "$__kitbash_current_indent" 1>&2
     printf "%s\n" "$@" 1>&2
+}
+__babashka_log() {
+    __kitbash_log "called legacy __babashka_log"
+    __kitbash_log "$@"
 }
 
 __babashka_fail() {
@@ -82,7 +86,7 @@ function process() {
             process_meet
             process_is_met || __babashka_fail "dependency didn't converge"
         else
-            __babashka_log '  `- dry run, skipping...'
+            __kitbash_log '  `- dry run, skipping...'
         fi
     fi
     # If get_id exists we want to unset it so that we don't get
@@ -93,18 +97,18 @@ function process() {
 }
 
 function process_is_met() {
-    __babashka_log '`- is met?'
+    __kitbash_log '`- is met?'
     is_met > $__babashka_output_stream
     st=$?
-    __babashka_log "  $st"
+    __kitbash_log "  $st"
     return $st
 }
 
 function process_meet() {
-    __babashka_log "=> meet "
+    __kitbash_log "=> meet "
     meet > $__babashka_output_stream
     st=$?
-    __babashka_log "=> $st"
+    __kitbash_log "=> $st"
 }
 
 function on_change() {
@@ -126,8 +130,8 @@ function requires_nested() {
 
 # $1 - dep name to invoke
 function __babashka_invoke() {
-    (( __babashka_current_indent = __babashka_current_indent + 1 ))
-    __babashka_log "-> $1"
+    (( __kitbash_current_indent = __kitbash_current_indent + 1 ))
+    __kitbash_log "-> $1"
     eval "$1"
 
     # that makes the return code 1 even if babashka succeeds, because arithmetic
@@ -137,7 +141,7 @@ function __babashka_invoke() {
     # so force it to succeed with || true, we don't want the increment/decrement
     # to alter the exit code anyway (will still return exit 1 if babashka
     # failed to converge).
-    (( __babashka_current_indent = __babashka_current_indent - 1 )) || true
+    (( __kitbash_current_indent = __kitbash_current_indent - 1 )) || true
 }
 function __babashka_load_deps() {
     # Rename directories to be a bit more clear what they're for
