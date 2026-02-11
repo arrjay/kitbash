@@ -1,47 +1,50 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
-__babashka_trace=no
-__babashka_output_stream=/dev/null
-__babashka_dry_run=no
+__kitbash_trace=no
+__kitbash_output_stream=/dev/null
+__kitbash_dry_run=no
 
-declare -A __babashka_dirty
+declare -A __kitbash_dirty
 
-__babashka_usage() {
-    echo "usage: babashka [-v] [-s] [-f] [-x] [-d <directory>] <dep name>"  >&2
-    echo "  -d <directory> : search a custom directory"                     >&2
-    echo "  -s : use sudo if required"                                      >&2
-    echo "  -f : force operations"                                          >&2
-    echo "  -x : trace mode (debug)"                                        >&2
-    echo "  -y : dry-run, don't attempt to converge"                        >&2
-    echo "  -v : verbose mode"                                              >&2
+__kitbash_usage() {
+    echo "usage: $0 [-v] [-s] [-f] [-x] [-d <directory>] <dep name>"  >&2
+    echo "  -d <directory> : search a custom directory"               >&2
+    echo "  -s : use sudo if required"                                >&2
+    echo "  -f : force operations"                                    >&2
+    echo "  -x : trace mode (debug)"                                  >&2
+    echo "  -y : dry-run, don't attempt to converge"                  >&2
+    echo "  -v : verbose mode"                                        >&2
     exit 1
 }
 
 while getopts "vfxsyd:" opt; do
     case $opt in
         x)
-            __babashka_trace=yes
+            __kitbash_trace=yes
             ;;
         s)
         # TODO:
         # Hardcode the sudo path, since this is potentially a bit dicey
             __babashka_sudo="sudo"
+            __kitbash_sudo="sudo"
             ;;
         f)
+            __babashka_force="yes"
             __babushka_force="yes"
+            __kitbash_force="yes"
             ;;
         d)
             # Set a custom directory to also source in
-            __babashka_directory=$(echo $OPTARG | xargs)
+            __kitbash_directory=$(echo $OPTARG | xargs)
             ;;
         v)
-            __babashka_output_stream="/dev/stderr"
+            __kitbash_output_stream="/dev/stderr"
             ;;
         y)
-            __babashka_dry_run="yes"
+            __kitbash_dry_run="yes"
             ;;
         \?)
-            __babashka_usage
+            __kitbash_usage
             ;;
     esac
 done
@@ -50,7 +53,7 @@ done
 shift $shift_value
 unset OPTIND
 
-if [ $__babashka_trace = "yes" ]; then
+if [ $__kitbash_trace = "yes" ]; then
     set -x
 fi
 
@@ -63,28 +66,32 @@ __babashka_log() {
     __kitbash_log "$@"
 }
 
-__babashka_fail() {
+__kitbash_fail() {
     echo ERROR: "$@" 1>&2
     exit 1
 }
+__babashka_fail() {
+    __kitbash_log  "called legacy __babashka_fail"
+    __kitbash_fail "$@"
+}
 
 unmeetable() {
-    __babashka_fail "$@"
+    __kitbash_fail "$@"
 }
 function process() {
     if ! process_is_met; then
         # Check if get_id is declared, so that we can log this in the 
-        # __babashka_dirty array
+        # __kitbash_dirty array
         if type get_id &> /dev/null; then
             # The function we're in defined a get_id feature, so we can mark this
             # as a dirtied element so that later things can trigger on it
             # if they like.
             local __id=$(get_id)
-            __babashka_dirty["${FUNCNAME[1]}:${__id}"]="1"
+            __kitbash_dirty["${FUNCNAME[1]}:${__id}"]="1"
         fi
-        if [ "$__babashka_dry_run" = "no" ]; then
+        if [ "$__kitbash_dry_run" = "no" ]; then
             process_meet
-            process_is_met || __babashka_fail "dependency didn't converge"
+            process_is_met || __kitbash_fail "dependency didn't converge"
         else
             __kitbash_log '  `- dry run, skipping...'
         fi
@@ -98,7 +105,7 @@ function process() {
 
 function process_is_met() {
     __kitbash_log '`- is met?'
-    is_met > $__babashka_output_stream
+    is_met > $__kitbash_output_stream
     st=$?
     __kitbash_log "  $st"
     return $st
@@ -106,47 +113,48 @@ function process_is_met() {
 
 function process_meet() {
     __kitbash_log "=> meet "
-    meet > $__babashka_output_stream
+    meet > $__kitbash_output_stream
     st=$?
     __kitbash_log "=> $st"
 }
 
 function on_change() {
     # If a specific thing got dirtied, then we can return true to that.
-    [[ -v __babashka_dirty["$1"] ]]
+    [[ -v __kitbash_dirty["$1"] ]]
 }
 
 ## Allow for functions to declare other functions as requirements
 
 function requires() {
-    __babashka_invoke "$1"
+    __kitbash_invoke "$1"
 }
 
 ### Need to spawn a subshell for this one.
 
 function requires_nested() {
-    ( __babashka_invoke "$1" ) || exit 1
+    ( __kitbash_invoke "$1" ) || exit 1
 }
 
 # $1 - dep name to invoke
-function __babashka_invoke() {
+function __kitbash_invoke() {
     (( __kitbash_current_indent = __kitbash_current_indent + 1 ))
     __kitbash_log "-> $1"
     eval "$1"
 
-    # that makes the return code 1 even if babashka succeeds, because arithmetic
+    # that makes the return code 1 even if kitbash succeeds, because arithmetic
     # expressions behave differently than success/error of commands:
     # http://wiki.bash-hackers.org/syntax/arith_expr#truth
     #
     # so force it to succeed with || true, we don't want the increment/decrement
-    # to alter the exit code anyway (will still return exit 1 if babashka
+    # to alter the exit code anyway (will still return exit 1 if kitbash
     # failed to converge).
     (( __kitbash_current_indent = __kitbash_current_indent - 1 )) || true
 }
-function __babashka_load_deps() {
+function __kitbash_load_deps() {
     # Rename directories to be a bit more clear what they're for
     # Include a system-level Babashka repository for common packages and stuff
-    for path in babashka/ babashka/dependencies/ /etc/babashka/dependencies /etc/babashka/helpers ${__babashka_directory:+$__babashka_directory}; do
+    # TODO: warn for legacy babashka paths
+    for path in babashka/ babashka/dependencies/ /etc/babashka/dependencies /etc/babashka/helpers ${__kitbash_directory:+$__kitbash_directory}; do
         if [ -d $path ]; then
             __babashka_load_deps_from_path "$path"
         fi
@@ -155,7 +163,7 @@ function __babashka_load_deps() {
 
 # $1 - path to search over
 # [$2] - pattern to match for deps
-function __babashka_find_deps_from_path() {
+function __kitbash_find_deps_from_path() {
     # Use -L to follow links
     # So we're looking for a special file, the "don't recurse" file, to keep
     # Babashka from walking the whole tree to look for shell files to load.
@@ -170,18 +178,25 @@ function __babashka_find_deps_from_path() {
         # Don't scan git directories, obviously
         return
     fi
-    if [ -e "$1/.babashka_no_recurse" ]; then
-        find -L "$1" -maxdepth 1 -type f -iname "*.${2:-sh}" 
+    if   [ -e "$1/.kitbash_no_recurse" ] ; then
+        find -L "$1" -maxdepth 1 -type f -iname "*.${2:-sh}"
+    elif [ -e "$1/.babashka_no_recurse" ]; then
+        __kitbash_log "using legacy .babashka_no_recurse marker at $1"
+        find -L "$1" -maxdepth 1 -type f -iname "*.${2:-sh}"
     else
         find -L "$1" -type f -iname "*.${2:-sh}"
     fi
 }
 
 # $1 - path to load deps from
-function __babashka_load_deps_from_path() {
-    for path in $(__babashka_find_deps_from_path "$1"); do
+function __kitbash_load_deps_from_path() {
+    for path in $(__kitbash_find_deps_from_path "$1"); do
         source $path
     done
+}
+function __babashka_load_deps_from_path() {
+    __kitbash_log "using legacy __babashka_load_deps_from_path against $1"
+    __kitbash_load_deps_from_path "$1"
 }
 file_exists() {
     if [ "${1:0:7}" = "hdfs://" ]; then
@@ -219,14 +234,14 @@ file_is_newer() {
     return 0
 }
 
-function __babashka_main() {
+function __kitbash_main() {
     if [ $# -eq 1 ]; then
-        __babashka_invoke "$1"
+        __kitbash_invoke "$1"
     else
-        __babashka_usage
+        __kitbash_usage
     fi
 }
 
-__babashka_load_deps
+__kitbash_load_deps
 
-__babashka_main "$@"
+__kitbash_main "$@"
