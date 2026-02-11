@@ -3,6 +3,7 @@
 __kitbash_trace=no
 __kitbash_output_stream=/dev/null
 __kitbash_dry_run=no
+__kitbash_current_indent=0
 
 declare -A __kitbash_dirty
 
