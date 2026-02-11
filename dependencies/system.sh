@@ -1,7 +1,9 @@
-function system.group() {
+# shellcheck shell=bash
+
+function system::group() {
   _group_name=$1; shift
 
-  __babashka_log "== ${FUNCNAME[0]} $_group_name"
+  __kitbash_log "== ${FUNCNAME[0]} $_group_name"
   while getopts "g:" opt; do
     case "$opt" in
       # echoing through xargs trims whitespace
@@ -28,16 +30,19 @@ function system.group() {
   }
   function meet() {
     if getent group $_group_name; then
-      $__babashka_sudo groupmod -g $gid $_group_name
+      $__kitbash_sudo groupmod -g $gid $_group_name
     else
-      $__babashka_sudo addgroup $_group_name ${gid:+-gid $gid}
+      $__kitbash_sudo addgroup $_group_name ${gid:+-gid $gid}
     fi
   }
   process
 }
+function system.group() {
+  __kitbash_log "using legacy system.group()"
+  system::group "${@}"
+}
 
-function system.user() {
-
+function system::user() {
   _user_name=$1; shift
   # g: gid or group name
   # u: uid
@@ -64,7 +69,7 @@ function system.user() {
   # Reset the option parsing
   unset OPTIND
   unset OPTARG
-  __babashka_log "== ${FUNCNAME[0]} $_user_name"
+  __kitbash_log "== ${FUNCNAME[0]} $_user_name"
   if [[ is_system == true ]]; then
     unset $homedir
   fi
@@ -120,7 +125,7 @@ function system.user() {
     esac
     if getent passwd ${_user_name} ; then
       # User already exists, so we're modifying the user
-      $__babashka_sudo usermod \
+      $__kitbash_sudo usermod \
         ${_gid:+-g $_gid} \
         ${uid:+-u $uid} \
         ${shell:+-s $shell} \
@@ -128,7 +133,7 @@ function system.user() {
         ${_user_name}
     else
       # User doesn't exist, create it
-      $__babashka_sudo useradd \
+      $__kitbash_sudo useradd \
         ${_gid:+-g $_gid} \
         ${uid:+-u $uid} \
         ${homedir:+-d $homedir -m} \
@@ -139,7 +144,12 @@ function system.user() {
   process
 }
 
-system.user.groups() {
+function system.user() {
+  __kitbash_log "using legacy system.user()"
+  system::user "${@}"
+}
+
+function system::user::groups() {
   _user_name=$1; shift
   # g: gid or group name
   
@@ -158,11 +168,11 @@ system.user.groups() {
   # Reset the option parsing
   unset OPTIND
   unset OPTARG
-  __babashka_log "== ${FUNCNAME[0]} $_user_name"
-  getent passwd ${_user_name} > /dev/null || __babashka_fail "${FUNCNAME[0]}: User $_user_name does not exist."
+  __kitbash_log "== ${FUNCNAME[0]} $_user_name"
+  getent passwd ${_user_name} > /dev/null || __kitbash_fail "${FUNCNAME[0]}: User $_user_name does not exist."
   
   for group in ${_groups[@]}; do
-    getent group $group > /dev/null || __babashka_fail "${FUNCNAME[0]}: Group $group does not exist."
+    getent group $group > /dev/null || __kitbash_fail "${FUNCNAME[0]}: Group $group does not exist."
   done
   
   function get_id() {
@@ -216,9 +226,14 @@ system.user.groups() {
   }
   function meet() {
     groups=$(IFS=, ; echo "${_groups[*]}")
-    $__babashka_sudo usermod \
+    $__kitbash_sudo usermod \
       -G $groups \
       ${_user_name}
   }
   process
+}
+
+function system.user.groups() {
+  __kitbash_log "using legacy system.user.groups"
+  system::user::groups "${@}"
 }
