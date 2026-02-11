@@ -153,10 +153,15 @@ function __kitbash_invoke() {
 function __kitbash_load_deps() {
     # Rename directories to be a bit more clear what they're for
     # Include a system-level Babashka repository for common packages and stuff
-    # TODO: warn for legacy babashka paths
-    for path in babashka/ babashka/dependencies/ /etc/babashka/dependencies /etc/babashka/helpers ${__kitbash_directory:+$__kitbash_directory}; do
+    for path in babashka/ babashka/dependencies/ /etc/babashka/dependencies /etc/babashka/helpers ; do
         if [ -d $path ]; then
-            __babashka_load_deps_from_path "$path"
+            __kitbash_log "loaded legacy babashka repository $path"
+            __kitbash_load_deps_from_path "$path"
+        fi
+    done
+    for path in kitbash/ kitbash/dependencies/ /etc/kitbash/dependencies /etc/kitbash/helpers ${__kitbash_directory:+$__kitbash_directory} ; do
+        if [ -d $path ]; then
+            __kitbash_load_deps_from_path "$path"
         fi
     done
 }
