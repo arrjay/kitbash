@@ -11,14 +11,14 @@ case "`uname -s`" in
       Debian)
         ;&
       Ubuntu)
-        __babashka_load_deps_from_path $ABSOLUTE_PATH/systemd
+        __kitbash_load_deps_from_path $ABSOLUTE_PATH/systemd
         ;;
       esac
     elif [ -e /etc/alpine-release ]; then
       # it's Alpine Linux! Also Woo!
       # Also this should get checked for whether or not it's running
       # openrc. I'm pretty sure all Alpine releases do? But who knows really.
-      __babashka_load_deps_from_path $ABSOLUTE_PATH/openrc
+      __kitbash_load_deps_from_path $ABSOLUTE_PATH/openrc
     fi
     ;;
   # Darwin)

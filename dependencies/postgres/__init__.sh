@@ -9,18 +9,18 @@ case "`uname -s`" in
       Debian)
         ;&
       Ubuntu)
-        __babashka_load_deps_from_path $ABSOLUTE_PATH/debian
+        __kitbash_load_deps_from_path $ABSOLUTE_PATH/debian
         ;;
       esac
     elif [ -e /etc/arch-release ]; then
       # it's Arch Linux! Woo!
-      __babashka_load_deps_from_path $ABSOLUTE_PATH/arch
+      __kitbash_load_deps_from_path $ABSOLUTE_PATH/arch
     fi
     ;;
   Darwin)
     # Probably macOS
     # Probably _probably_ Homebrew
-    __babashka_load_deps_from_path $ABSOLUTE_PATH/darwin
+    __kitbash_load_deps_from_path $ABSOLUTE_PATH/darwin
     ;;
 esac
 

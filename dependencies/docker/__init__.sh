@@ -9,20 +9,20 @@ case "`uname -s`" in
       Debian)
         ;&
       Ubuntu)
-        __babashka_load_deps_from_path $ABSOLUTE_PATH/apt
+        __kitbash_load_deps_from_path $ABSOLUTE_PATH/apt
         ;;
       esac
     elif [ -e /etc/arch-release ]; then
       # it's Arch Linux! Woo!
-      __babashka_load_deps_from_path $ABSOLUTE_PATH/pacman
+      __kitbash_load_deps_from_path $ABSOLUTE_PATH/pacman
     elif [ -e /etc/alpine-release ]; then
         # it's Alpine Linux! Also Woo!
-        __babashka_load_deps_from_path $ABSOLUTE_PATH/apk
+        __kitbash_load_deps_from_path $ABSOLUTE_PATH/apk
     fi
     ;;
   Darwin)
     # Probably macOS
     # Probably _probably_ Homebrew
-    __babashka_load_deps_from_path $ABSOLUTE_PATH/brew
+    __kitbash_load_deps_from_path $ABSOLUTE_PATH/brew
     ;;
 esac

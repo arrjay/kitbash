@@ -11,7 +11,7 @@ case "`uname -s`" in
       # Find out if debian and ubuntu are the same here, dunno if they
       # are actually the same or not.
       # Oh well.
-      __babashka_load_deps_from_path $ABSOLUTE_PATH/ubuntu
+      __kitbash_load_deps_from_path $ABSOLUTE_PATH/ubuntu
       ;;
    esac
    ;;
