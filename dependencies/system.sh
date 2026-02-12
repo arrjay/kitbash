@@ -111,6 +111,9 @@ function system::user() {
     # Implement -s, since I'm not sure what that should do
   }
   function meet() {
+    local sys
+    local -a cmds
+    sys="$(uname -s)"
     case $gid in
       *[!0-9]*)
         # Is a string, so we need to check if the group even exists
@@ -123,23 +126,32 @@ function system::user() {
         _gid=$gid
         ;;
     esac
+    # assemble the command and *options* here, because the switch order matters.
     if getent passwd ${_user_name} ; then
       # User already exists, so we're modifying the user
-      $__kitbash_sudo usermod \
-        ${_gid:+-g $_gid} \
-        ${uid:+-u $uid} \
-        ${shell:+-s $shell} \
-        ${homedir:+-d $homedir} \
-        ${_user_name}
+      case "${sys}" in
+        FreeBSD) cmds=(pw usermod "${_user_name}") ;;
+        *)       cmds=(usermod)                    ;;
+      esac
     else
-      # User doesn't exist, create it
-      $__kitbash_sudo useradd \
-        ${_gid:+-g $_gid} \
-        ${uid:+-u $uid} \
-        ${homedir:+-d $homedir -m} \
-        ${shell:+-s $shell} \
-        ${_user_name}
+      # we are going to create a user.
+      case "${sys}" in
+        FreeBSD) cmds=(pw useradd "${_user_name}") ;;
+        *)       cmds=(useradd)                    ;;
+      esac
     fi
+    # process user flags
+    [[ "${_gid:-}"    ]] && cmds+=(-g "${_gid}")
+    [[ "${uid:-}"     ]] && cmds+=(-u "${uid}")
+    [[ "${homedir:-}" ]] && cmds+=(-d "${homedir}" -m)
+    [[ "${shell:-}"   ]] && cmds+=(-s "${shell}")
+    # handle adding the username as a suffix here.
+    case "${sys}" in
+      FreeBSD) :                       ;;
+      *)       cmds+=("${_user_name}") ;;
+    esac
+    # run the assemblage
+    $__kitbash_sudo "${cmds[@]}"
   }
   process
 }
