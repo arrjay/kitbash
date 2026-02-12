@@ -10,6 +10,8 @@ case "`uname -s`" in
       case "`lsb_release -is`" in
       Debian)
         ;&
+      Fedora)
+        ;&
       Ubuntu)
         __kitbash_load_deps_from_path $ABSOLUTE_PATH/systemd
         ;;
