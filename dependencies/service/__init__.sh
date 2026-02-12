@@ -27,4 +27,18 @@ case "`uname -s`" in
   #   # Probably macOS
   #   # TODO: Support launchctl here.
   #   ;;
+  FreeBSD)
+    __kitbash_load_deps_from_path $ABSOLUTE_PATH/sysrc
+  ;;
 esac
+
+# forward/backward compat shim
+declare -f system::service::enable  >/dev/null 2>&1 && system.service.enable()  { __kitbash_log "called legacy system.service.enable"  ; system::service::enable "${@}"  ; }
+declare -f system::service::disable >/dev/null 2>&1 && system.service.disable() { __kitbash_log "called legacy system.service.disable" ; system::service::disable "${@}" ; }
+declare -f system::service::started >/dev/null 2>&1 && system.service.started() { __kitbash_log "called legacy system.service.started" ; system::service::started "${@}" ; }
+declare -f system::service::stopped >/dev/null 2>&1 && system.service.stopped() { __kitbash_log "called legacy system.service.stopped" ; system::service::stopped "${@}" ; }
+
+declare -f system::service::enable  >/dev/null 2>&1 || { declare -f system.service.enable  >/dev/null 2>&1 && system::service::enable()  { __kitbash_log "legacy system.service.enable provider in use"  ; system.service.enable "${@}"  ; } ; }
+declare -f system::service::disable >/dev/null 2>&1 || { declare -f system.service.disable >/dev/null 2>&1 && system::service::disable() { __kitbash_log "legacy system.service.disable provider in use" ; system.service.disable "${@}" ; } ; }
+declare -f system::service::started >/dev/null 2>&1 || { declare -f system.service.started >/dev/null 2>&1 && system::service::started() { __kitbash_log "legacy system.service.started provider in use" ; system.service.started "${@}" ; } ; }
+declare -f system::service::stopped >/dev/null 2>&1 || { declare -f system.service.stopped >/dev/null 2>&1 && system::service::stopped() { __kitbash_log "legacy system.service.stopped provider in use" ; system.service.stopped "${@}" ; } ; }
