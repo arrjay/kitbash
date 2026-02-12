@@ -5,7 +5,7 @@ system::service::enable() {
   __kitbash_log "== ${FUNCNAME[0]} (sysrc) $_unit"
   local exists=0 ; svc
   for svc in /etc/rc.d/${_unit} /usr/local/etc/rc.d/${_unit} ; do [[ -x "${svc}" ]] && exists=1 ; done
-  [[ "${exists}" -eq 1 ]] || __kitbash_file "${FUNCNAME[0]} (sysrc): Unit $_unit not installed"
+  [[ "${exists}" -eq 1 ]] || __kitbash_fail "${FUNCNAME[0]} (sysrc): Unit $_unit not installed"
 
   function get_id() {
     echo "${_unit}"
@@ -27,7 +27,7 @@ system::service::disable() {
   __kitbash_log "== ${FUNCNAME[0]} (sysrc) $_unit"
   local exists=0 ; local svc
   for svc in /etc/rc.d/${_unit} /usr/local/etc/rc.d/${_unit} ; do [[ -x "${svc}" ]] && exists=1 ; done
-  [[ "${exists}" -eq 1 ]] || __kitbash_file "${FUNCNAME[0]} (sysrc): Unit $_unit not installed"
+  [[ "${exists}" -eq 1 ]] || __kitbash_fail "${FUNCNAME[0]} (sysrc): Unit $_unit not installed"
 
   function get_id() {
     echo "${_unit}"
@@ -48,7 +48,7 @@ system::service::started() {
   __kitbash_log "== ${FUNCNAME[0]} (sysrc) $_unit"
   local exists=0 ; svc
   for svc in /etc/rc.d/${_unit} /usr/local/etc/rc.d/${_unit} ; do [[ -x "${svc}" ]] && exists=1 ; done
-  [[ "${exists}" -eq 1 ]] || __kitbash_file "${FUNCNAME[0]} (sysrc): Unit $_unit not installed"
+  [[ "${exists}" -eq 1 ]] || __kitbash_fail "${FUNCNAME[0]} (sysrc): Unit $_unit not installed"
 
   function get_id() {
     echo "${_unit}"
@@ -68,7 +68,7 @@ system::service::stopped() {
   __kitbash_log "== ${FUNCNAME[0]} (sysrc) $_unit"
   local exists=0 ; svc
   for svc in /etc/rc.d/${_unit} /usr/local/etc/rc.d/${_unit} ; do [[ -x "${svc}" ]] && exists=1 ; done
-  [[ "${exists}" -eq 1 ]] || __kitbash_file "${FUNCNAME[0]} (sysrc): Unit $_unit not installed"
+  [[ "${exists}" -eq 1 ]] || __kitbash_fail "${FUNCNAME[0]} (sysrc): Unit $_unit not installed"
 
   function get_id() {
     echo "${_unit}"
