@@ -170,27 +170,38 @@ function __kitbash_load_deps() {
 # $1 - path to search over
 # [$2] - pattern to match for deps
 function __kitbash_find_deps_from_path() {
-    # Use -L to follow links
-    # So we're looking for a special file, the "don't recurse" file, to keep
-    # Babashka from walking the whole tree to look for shell files to load.
-    # We also want to skip any directories named "files", since that's the default
-    # location for files being used by configuration management to live.
-    if [ $(basename "$1") = "files" ] && -d $1; then 
+    local path="${1}"
+    local ext="${2:-sh}"
+    local recurse=yes
+    local gs_state
+    [[ -d "${path}" ]] && {
+      case "${path}" in
         # Skip this, because it's likely a files directory and shouldn't be 
         # scanned
-        return
-    fi
-    if [ $(basename "$1") = ".git" ] && -d $1; then 
+        */files) return ;;
         # Don't scan git directories, obviously
-        return
-    fi
-    if   [ -e "$1/.kitbash_no_recurse" ] ; then
-        find -L "$1" -maxdepth 1 -type f -iname "*.${2:-sh}"
-    elif [ -e "$1/.babashka_no_recurse" ]; then
-        __kitbash_log "using legacy .babashka_no_recurse marker at $1"
-        find -L "$1" -maxdepth 1 -type f -iname "*.${2:-sh}"
+        */.git)  return ;;
+      esac
+    }
+    # So we're looking for a special file, the "don't recurse" file, to keep
+    # Kitbash from walking the whole tree to look for shell files to load.
+    [[ -e "${path}/.kitbash_no_recurse" ]]  && recurse=no
+    [[ -e "${path}/.babashka_no_recurse" ]] && { __kitbash_log "using legacy .babashka_no_recurse marker at $1" ; recurse=no ; }
+
+    if [[ "${recurse}" == "no" ]] ; then
+      printf '%s\n' "${path}"/*".${ext}"
     else
-        find -L "$1" -type f -iname "*.${2:-sh}"
+      if [[ "${BASH_VERSINFO[0]}" -ge 4 ]] ; then
+        gs_state="$(shopt globstar)"
+        shopt -s globstar
+        printf '%s\n' "${path}"/**/*".${ext}"
+        case "${gs_state}" in
+          *off) shopt -u globstar ;;
+        esac
+      else
+        # Use -L to follow links
+        find -L "${path}" -type f -iname "*.${ext}"
+      fi
     fi
 }
 
