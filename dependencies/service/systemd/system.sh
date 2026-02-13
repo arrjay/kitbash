@@ -13,6 +13,17 @@ __internal::system::service::preamble() {
   fi
 }
 
+# this *is* intended for external use, but is not...a direct state?
+# it's intended to help connect what's running with what's configured.
+# as a result there is no get_id/is_met/meet/process at all.
+fact::system::service::mainpid() {
+  local _unit=$1; shift
+
+  __internal::system::service::preamble "${FUNCNAME[0]}" "$_unit"
+
+  systemctl show --property MainPID --value "${_unit}"
+}
+
 system::service::enable() {
   local _unit=$1; shift
 
