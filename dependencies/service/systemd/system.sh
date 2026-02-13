@@ -1,21 +1,28 @@
 # shellcheck shell=bash
 # Manage systemd units
 
-system::service::enable() {
-  local _unit=$1; shift
+# this is *not* intended for external use.
+__internal::system::service::preamble() {
+  local _unit=$1     ; shift
+  local _funcname=$1 ; shift
+  __babashka_log "== ${_funcname} (systemd) $_unit"
 
-  __babashka_log "== ${FUNCNAME[0]} (systemd) $_unit"
   # check if the unit even exists; if it doesn't this makes no sense
   if systemctl is-enabled "$_unit" 2>&1 | grep -q "No such file or directory" ; then
     __babashka_fail "${FUNCNAME[0]} (systemd): Unit $_unit not installed"
   fi
+}
+
+system::service::enable() {
+  local _unit=$1; shift
+
+  __internal::system::service::preamble "${FUNCNAME[0]}" "$_unit"
 
   function get_id() {
     echo "${_unit}"
   }
 
   is_met() {
-    # how do we check if a systemd service is enabled?
     systemctl is-enabled "$_unit" | grep -q "enabled"
   }
   meet() {
@@ -26,19 +33,14 @@ system::service::enable() {
 
 system::service::disable() {
   local _unit=$1; shift
-  __babashka_log "== ${FUNCNAME[0]} (systemd)  $_unit"
 
-  # check if the unit even exists; if it doesn't this makes no sense
-  if systemctl is-enabled "$_unit" 2>&1 | grep -q "No such file or directory" ; then
-    __babashka_fail "${FUNCNAME[0]} (systemd): Unit $_unit not installed"
-  fi
+  __internal::system::service::preamble "${FUNCNAME[0]}" "$_unit"
 
   function get_id() {
     echo "${_unit}"
   }
 
   is_met() {
-    # how do we check if a systemd service is enabled?
     systemctl is-enabled "$_unit" | grep -q "disabled"
   }
   meet() {
@@ -51,11 +53,7 @@ system::service::disable() {
 system::service::started() {
   local _unit=$1; shift
 
-  __babashka_log "== ${FUNCNAME[0]} (systemd) $_unit"
-  # check if the unit even exists; if it doesn't this makes no sense
-  if systemctl is-enabled "$_unit" 2>&1 | grep -q "No such file or directory" ; then
-    __babashka_fail "${FUNCNAME[0]} (systemd): Unit $_unit not installed"
-  fi
+  __internal::system::service::preamble "${FUNCNAME[0]}" "$_unit"
 
   function get_id() {
     echo "${_unit}"
@@ -73,11 +71,7 @@ system::service::started() {
 system::service::stopped() {
   local _unit=$1; shift
 
-  __babashka_log "== ${FUNCNAME[0]} (systemd) $_unit"
-  # check if the unit even exists; if it doesn't this makes no sense
-  if systemctl is-enabled "$_unit" 2>&1 | grep -q "No such file or directory" ; then
-    __babashka_fail "${FUNCNAME[0]} (systemd): Unit $_unit not installed"
-  fi
+  __internal::system::service::preamble "${FUNCNAME[0]}" "$_unit"
 
   function get_id() {
     echo "${_unit}"
