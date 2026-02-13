@@ -9,7 +9,7 @@ __internal::system::service::preamble() {
 
   # check if the unit even exists; if it doesn't this makes no sense
   if systemctl is-enabled "$_unit" 2>&1 | grep -q "No such file or directory" ; then
-    __babashka_fail "${FUNCNAME[0]} (systemd): Unit $_unit not installed"
+    __babashka_fail "${_funcname} (systemd): Unit $_unit not installed"
   fi
 }
 
