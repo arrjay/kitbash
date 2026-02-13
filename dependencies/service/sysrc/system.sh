@@ -19,13 +19,13 @@ fact::system::service::mainpid() {
 
   # this assumes 'typical' "foo is running as pid XXXX."
   buf="$(service "${_unit}" status)"
-  buf="${buf## *}"
+  buf="${buf##* }"
   buf="${buf%.}"
   printf '%s\n' "${buf}"
 }
 
 system::service::enable() {
-  local _unit=$1 ; shift
+  _unit=$1 ; shift
 
   __internal::system::service::preamble "${_unit}" "${FUNCNAME[0]}"
 
@@ -45,7 +45,7 @@ system::service::enable() {
 }
 
 system::service::disable() {
-  local _unit=$1 ; shift
+  _unit=$1 ; shift
 
   __internal::system::service::preamble "${_unit}" "${FUNCNAME[0]}"
 
@@ -64,7 +64,7 @@ system::service::disable() {
 }
 
 system::service::started() {
-  local _unit=$1 ; shift
+  _unit=$1 ; shift
 
   __internal::system::service::preamble "${_unit}" "${FUNCNAME[0]}"
 
@@ -76,13 +76,14 @@ system::service::started() {
     service "${_unit}" status >/dev/null 2>&1
   }
 
+  # if the service is already running, don't _start_ it.
   function meet() {
-    $__kitbash_sudo service "${_unit}" onestart
+    service "${_unit}" status >/dev/null 2>&1 || $__kitbash_sudo service "${_unit}" onestart
   }
 }
 
 system::service::stopped() {
-  local _unit=$1 ; shift
+  _unit=$1 ; shift
 
   __internal::system::service::preamble "${_unit}" "${FUNCNAME[0]}"
 
@@ -97,5 +98,24 @@ system::service::stopped() {
 
   function meet() {
     $__kitbash_sudo service "${_unit}" stop
+  }
+}
+
+system::service::restart() {
+  _unit=$1 ; shift
+
+  __internal::system::service::preamble "${_unit}" "${FUNCNAME[0]}"
+
+  function get_id() {
+    echo "${_unit}"
+  }
+
+  function is_met() {
+    service "${_unit}" onerestart >/dev/null 2>&1
+  }
+
+  # this is, definitionally, unmeetable?
+  function meet() {
+    return 0
   }
 }
