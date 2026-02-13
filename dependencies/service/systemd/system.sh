@@ -19,7 +19,7 @@ __internal::system::service::preamble() {
 fact::system::service::mainpid() {
   local _unit=$1; shift
 
-  __internal::system::service::preamble "${FUNCNAME[0]}" "${_unit}"
+  __internal::system::service::preamble "${_unit}" "${FUNCNAME[0]}"
 
   systemctl show --property MainPID --value "${_unit}"
 }
@@ -27,7 +27,7 @@ fact::system::service::mainpid() {
 system::service::enable() {
   local _unit=$1; shift
 
-  __internal::system::service::preamble "${FUNCNAME[0]}" "${_unit}"
+  __internal::system::service::preamble "${_unit}" "${FUNCNAME[0]}"
 
   function get_id() {
     echo "${_unit}"
@@ -45,7 +45,7 @@ system::service::enable() {
 system::service::disable() {
   local _unit=$1; shift
 
-  __internal::system::service::preamble "${FUNCNAME[0]}" "${_unit}"
+  __internal::system::service::preamble "${_unit}" "${FUNCNAME[0]}"
 
   function get_id() {
     echo "${_unit}"
@@ -64,7 +64,7 @@ system::service::disable() {
 system::service::started() {
   local _unit=$1; shift
 
-  __internal::system::service::preamble "${FUNCNAME[0]}" "${_unit}"
+  __internal::system::service::preamble "${_unit}" "${FUNCNAME[0]}"
 
   function get_id() {
     echo "${_unit}"
@@ -82,7 +82,7 @@ system::service::started() {
 system::service::stopped() {
   local _unit=$1; shift
 
-  __internal::system::service::preamble "${FUNCNAME[0]}" "${_unit}"
+  __internal::system::service::preamble "${_unit}" "${FUNCNAME[0]}"
 
   function get_id() {
     echo "${_unit}"

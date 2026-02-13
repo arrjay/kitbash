@@ -8,14 +8,14 @@ __internal::system::service::preamble() {
   # check if the unit even exists; if it doesn't this makes no sense
   local exists=0 ; local svc
   for svc in /etc/rc.d/${_unit} /usr/local/etc/rc.d/${_unit} ; do [[ -x "${svc}" ]] && exists=1 ; done
-  [[ "${exists}" -eq 1 ]] || __kitbash_fail "${FUNCNAME[0]} (sysrc): Unit $_unit not installed"
+  [[ "${exists}" -eq 1 ]] || __kitbash_fail "${funcname} (sysrc): Unit $_unit not installed"
 }
 
 fact::system::service::mainpid() {
   local _unit=$1 ; shift
   local buf
 
-  __internal::system::service::preamble "${FUNCNAME[0]}" "${_unit}"
+  __internal::system::service::preamble "${_unit}" "${FUNCNAME[0]}"
 
   # this assumes 'typical' "foo is running as pid XXXX."
   buf="$(service "${_unit}" status)"
@@ -27,7 +27,7 @@ fact::system::service::mainpid() {
 system::service::enable() {
   local _unit=$1 ; shift
 
-  __internal::system::service::preamble "${FUNCNAME[0]}" "${_unit}"
+  __internal::system::service::preamble "${_unit}" "${FUNCNAME[0]}"
 
   function get_id() {
     echo "${_unit}"
@@ -47,7 +47,7 @@ system::service::enable() {
 system::service::disable() {
   local _unit=$1 ; shift
 
-  __internal::system::service::preamble "${FUNCNAME[0]}" "${_unit}"
+  __internal::system::service::preamble "${_unit}" "${FUNCNAME[0]}"
 
   function get_id() {
     echo "${_unit}"
@@ -66,7 +66,7 @@ system::service::disable() {
 system::service::started() {
   local _unit=$1 ; shift
 
-  __internal::system::service::preamble "${FUNCNAME[0]}" "${_unit}"
+  __internal::system::service::preamble "${_unit}" "${FUNCNAME[0]}"
 
   function get_id() {
     echo "${_unit}"
@@ -84,7 +84,7 @@ system::service::started() {
 system::service::stopped() {
   local _unit=$1 ; shift
 
-  __internal::system::service::preamble "${FUNCNAME[0]}" "${_unit}"
+  __internal::system::service::preamble "${_unit}" "${FUNCNAME[0]}"
 
   function get_id() {
     echo "${_unit}"
