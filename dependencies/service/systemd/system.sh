@@ -5,11 +5,11 @@
 __internal::system::service::preamble() {
   local _unit=$1     ; shift
   local _funcname=$1 ; shift
-  __babashka_log "== ${_funcname} (systemd) $_unit"
+  __kitbash_log "== ${_funcname} (systemd) ${_unit}"
 
   # check if the unit even exists; if it doesn't this makes no sense
-  if systemctl is-enabled "$_unit" 2>&1 | grep -q "No such file or directory" ; then
-    __babashka_fail "${_funcname} (systemd): Unit $_unit not installed"
+  if systemctl is-enabled "${_unit}" 2>&1 | grep -q "No such file or directory" ; then
+    __kitbash_fail "${_funcname} (systemd): Unit ${_unit} not installed"
   fi
 }
 
@@ -19,7 +19,7 @@ __internal::system::service::preamble() {
 fact::system::service::mainpid() {
   local _unit=$1; shift
 
-  __internal::system::service::preamble "${FUNCNAME[0]}" "$_unit"
+  __internal::system::service::preamble "${FUNCNAME[0]}" "${_unit}"
 
   systemctl show --property MainPID --value "${_unit}"
 }
@@ -27,17 +27,17 @@ fact::system::service::mainpid() {
 system::service::enable() {
   local _unit=$1; shift
 
-  __internal::system::service::preamble "${FUNCNAME[0]}" "$_unit"
+  __internal::system::service::preamble "${FUNCNAME[0]}" "${_unit}"
 
   function get_id() {
     echo "${_unit}"
   }
 
   is_met() {
-    systemctl is-enabled "$_unit" | grep -q "enabled"
+    systemctl is-enabled "${_unit}" | grep -q "enabled"
   }
   meet() {
-    $__babashka_sudo systemctl enable "$_unit" > /dev/null 2>&1;
+    $__kitbash_sudo systemctl enable "${_unit}" > /dev/null 2>&1;
   }
   process
 }
@@ -45,17 +45,17 @@ system::service::enable() {
 system::service::disable() {
   local _unit=$1; shift
 
-  __internal::system::service::preamble "${FUNCNAME[0]}" "$_unit"
+  __internal::system::service::preamble "${FUNCNAME[0]}" "${_unit}"
 
   function get_id() {
     echo "${_unit}"
   }
 
   is_met() {
-    systemctl is-enabled "$_unit" | grep -q "disabled"
+    systemctl is-enabled "${_unit}" | grep -q "disabled"
   }
   meet() {
-    $__babashka_sudo systemctl disable "$_unit" > /dev/null 2>&1;
+    $__kitbash_sudo systemctl disable "${_unit}" > /dev/null 2>&1;
   }
   process
 }
@@ -64,17 +64,17 @@ system::service::disable() {
 system::service::started() {
   local _unit=$1; shift
 
-  __internal::system::service::preamble "${FUNCNAME[0]}" "$_unit"
+  __internal::system::service::preamble "${FUNCNAME[0]}" "${_unit}"
 
   function get_id() {
     echo "${_unit}"
   }
 
   is_met() {
-    systemctl show --property ActiveState --value "$_unit" | grep -q "active"
+    systemctl show --property ActiveState --value "${_unit}" | grep -q "active"
   }
   meet() {
-    $__babashka_sudo systemctl start "$_unit" > /dev/null 2>&1;
+    $__kitbash_sudo systemctl start "${_unit}" > /dev/null 2>&1;
   }
   process
 }
@@ -82,16 +82,16 @@ system::service::started() {
 system::service::stopped() {
   local _unit=$1; shift
 
-  __internal::system::service::preamble "${FUNCNAME[0]}" "$_unit"
+  __internal::system::service::preamble "${FUNCNAME[0]}" "${_unit}"
 
   function get_id() {
     echo "${_unit}"
   }
 
   is_met() {
-    systemctl show --property ActiveState --value "$_unit" | grep -q "inactive"
+    systemctl show --property ActiveState --value "${_unit}" | grep -q "inactive"
   }
   meet() {
-    $__babashka_sudo systemctl stop "$_unit" > /dev/null 2>&1;
+    $__kitbash_sudo systemctl stop "${_unit}" > /dev/null 2>&1;
   }
 }
