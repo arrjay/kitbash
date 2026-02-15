@@ -1,7 +1,9 @@
+# shellcheck shell=bash
 # Manages a file on disk somewhere
 
-function system.file() {
-  local _file_name=$1; shift
+function system::file() {
+  _file_name="${1}" ; shift
+  [[ "${_file_name}" ]] || __kitbash_fail "you must specify a file destination to manage"
   # g: gid or group name
   # u: uid or username
   # s: source (optional)
@@ -12,75 +14,72 @@ function system.file() {
   while getopts "g:o:m:s:c:" opt; do
     case "$opt" in
       g)
-        local group=$(echo $OPTARG | xargs);;
+        group="$(echo $OPTARG | xargs)";;
       o)
-        local owner=$(echo $OPTARG | xargs);;
+        owner="$(echo $OPTARG | xargs)";;
       m)
-        local mode=$(echo $OPTARG | xargs);;
+        mode="$(echo $OPTARG | xargs)";;
       s)
-        local _source=$(echo $OPTARG | xargs);;
+        _source="$(echo $OPTARG | xargs)";;
       c)
-        local contents=$(echo $OPTARG | xargs);;
+        contents="$(echo $OPTARG | xargs)";;
     esac
   done
   unset OPTIND
   unset OPTARG
-  __babashka_log "== ${FUNCNAME[0]} $_file_name"
+  __kitbash_log "== ${FUNCNAME[0]} ${_file_name}"
+
+  # setting source *and* contents makes no sense. forbid.
+  [[ "${_source}" && "${contents}" ]] && __kitbash_fail "cannot set source and contents for file realization"
   
   function get_id() {
     echo "${_file_name}"
   }
 
   function is_met() {
-    # __babashka_log "file name: $_file_name"
-    ! [[ -e $_file_name ]] && return 1
-
-    if [[ $group != "" ]]; then
-      path.has_gid $_file_name $group || return 1
-    fi
-    if [[ $owner != "" ]]; then
-      path.has_uid $_file_name $owner || return 1
-    fi
-    if [[ $mode != "" ]]; then
-      path.has_mode $_file_name $mode || return 1
-    fi
+    # we're only going to check the basics for an existing file.
     # Okay the basic mode stuff is set up properly
     # (though ideally this'd be a helper function instead of C&P from system.directory)
     # TODO I guess?
-    # Okay anyway check contents now
+    [[ -e "${_file_name}" ]] && {
+      [[ "${owner}" ]] && { helper::path::owner "${_file_name}" "${owner}" || return 1 ; }
+      [[ "${group}" ]] && { helper::path::group "${_file_name}" "${group}" || return 1 ; }
+      [[ "${mode}"  ]] && { helper::path::mode  "${_file_name}" "${mode}"  || return 1 ; }
+    }
 
-    if [[ ${_source} != "" ]]; then
-      # okay we're using source
-      # We might need sudo privs to read the file
-      $__babashka_sudo diff $_file_name $_source
-      return $?
-    elif [[ $contents != "" ]]; then
-      # Use contents
-      # We might need sudo privs to read the file
-      echo $contents | $__babashka_sudo diff $_file_name -
-      return $?
-    else
-      # that's an error, at least one of these needs to be set
-      __babashka_fail "${FUNCNAME[0]} $_file_name: one of source or contents must be set"
-    fi
+    # the diffs here run through sudo so we're guaranteed to read the file.
+    # Okay anyway check contents now if we need to do those.
+    [[ "${_source}" ]] && {
+      $__kitbash_sudo diff "${_file_name}" "${_source}" || return $?
+    }
+
+    # or a contents version...
+    [[ "${contents}" ]] && {
+      echo "${contents}" | $__kitbash_sudo diff "${_file_name}" - || return $?
+    }
+
+    # if we're _here_ all is well.
     return 0
   }
+
   function meet() {
-    if [[ ${_source} != "" ]]; then
-      $__babashka_sudo cp $_source $_file_name
-    elif [[ $contents != "" ]]; then
-      # Do it quietly
-      echo $contents | $__babashka_sudo tee $_file_name > /dev/null
-    else
-      # Fail
-      return false;
-    fi
-    [[ $mode != "" ]] && $__babashka_sudo chmod $mode $_file_name
-    [[ $owner != "" ]] && $__babashka_sudo chown $owner $_file_name
-    [[ $group != "" ]] && $__babashka_sudo chgrp $group $_file_name
+    [[ "${contents}" ]] && {
+      echo "${contents}" | $__kitbash_sudo tee "${_file_name}" > /dev/null
+    }
+
+    [[ ${_source} ]] && {
+      $__kitbash_sudo cp "${_source}" "${_file_name}"
+    }
+
+    [[ "${mode}"  ]] && $__kitbash_sudo chmod "${mode}"  "${_file_name}"
+    [[ "${owner}" ]] && $__kitbash_sudo chown "${owner}" "${_file_name}"
+    [[ "${group}" ]] && $__kitbash_sudo chgrp "${group}" "${_file_name}"
   }
+
   process
 }
+
+__compat_shim "called legacy system.file" system.file system::file
 
 function system.file.line() {
   local _file=$1; shift
