@@ -1,27 +1,44 @@
+# shellcheck shell=bash
+
 # does this create a function? is that how this works? How does this even work?
 
-user.get_uid() {
-  _user=$1; shift
+# Helpers:
+# These work by returning success (or not) in a is_met block, which can then
+# trigger a meet block _to_ run. They are not workable as full kitbash
+# realizations, but 'help' abstract annoying bits away.
+# This also means they _should_ use locals and not step on the global variable
+# space where possible. A helper wrecking a realization would be...bad.
+# Facts:
+# These may return success of failure, but they *also* are returning targeted
+# data about...something. They largely work under the same constraints as
+# helpers, just they say other things too. Helpers should be silent.
 
-  if [[ $_user != "" ]]; then
-    case $_user in
-      *[!0-9]*)
-        # Is a string, so we need to check if the group even exists
-        # And if it doesn't, that's, well, bad? Yes, that's bad.
-        _uid=$(getent passwd $_user | awk -F ':' '{print $3}')
-        ;;
-      *)
-        # is a number
-        # We can pass it on directly
-        _uid=$_user
-        ;;
-    esac
-    echo $_uid
-  else
-    # If it's blank then we can't do anything useful
-    return -1
-  fi
+fact::user::uid() {
+  local _user="${1}"; shift
+  local _uid
+
+  # If it's blank then we can't do anything useful
+  [[ "${_user}" ]] || return 1
+
+  case "${_user}" in
+    *[!0-9]*)
+      # Is a string, so we need to check if the group even exists
+      # And if it doesn't, that's, well, bad? Yes, that's bad.
+      _uid="$(getent passwd "${_user}")"
+      _uid="${_uid#*:*}"
+      _uid="${_uid%%:*}"
+      ;;
+    *)
+      # is a number
+      # We can pass it on directly
+      _uid="${_user}"
+      ;;
+  esac
+
+  printf '%s\n' "${_uid}"
 }
+
+__compat_shim "called legacy user.get_uid" user.get_uid fact::user::uid
 
 group.get_gid() {
   _group_name=$1; shift
