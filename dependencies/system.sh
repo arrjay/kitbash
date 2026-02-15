@@ -37,10 +37,8 @@ function system::group() {
   }
   process
 }
-function system.group() {
-  __kitbash_log "using legacy system.group()"
-  system::group "${@}"
-}
+
+__compat_shim "called legacy system.group" system.group system::group
 
 function system::user() {
   _user_name=$1; shift
@@ -156,10 +154,7 @@ function system::user() {
   process
 }
 
-function system.user() {
-  __kitbash_log "using legacy system.user()"
-  system::user "${@}"
-}
+__compat_shim "called legacy system.user" system.user system::user
 
 function system::user::groups() {
   _user_name=$1; shift
@@ -245,7 +240,4 @@ function system::user::groups() {
   process
 }
 
-function system.user.groups() {
-  __kitbash_log "using legacy system.user.groups"
-  system::user::groups "${@}"
-}
+__compat_shim "called legacy system.user.groups" system.user.groups system::user::groups

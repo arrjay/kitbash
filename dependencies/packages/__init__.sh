@@ -35,9 +35,9 @@ case "`uname -s`" in
 esac
 
 # handle :: infix functions being the only ones loaded (back-compat for old callers)
-declare -f system::package >/dev/null 2>&1 && system.package() { __kitbash_log "called legacy system.package" ; system::package "${@}" ; }
-declare -f system::package::absent >/dev/null 2>&1 && system.package.absent() { __kitbash_log "called legacy system.package.absent" ; system::package::absent "${@}" ; }
+__compat_shim "called legacy system.package" system.package system::package
+__compat_shim "called legacy system.package.absent" system.package.absent system::package::absent
 
 # handle . infix functions being the only ones that were loaded (forward-compat so new callers work)
-declare -f system::package >/dev/null 2>&1 || { declare -f system.package >/dev/null 2>&1 && system::package() { __kitbash_log "legacy system.package provider in use" ; system.package "${@}" ; } ; }
-declare -f system::package::absent >/dev/null 2>&1 || { declare -f system.package.absent >/dev/null 2>&1 && system::package::absent() { __kitbash_log "legacy system.package.absent provider in use" ; system.package.absent "${@}" ; } ; }
+__exists system::package || __compat_shim "legacy system.package provider in use" system::package system.package
+__exists system::package::absent || __compat_shim "legacy system.package.absent provider in use" system::package::absent system.package.absent

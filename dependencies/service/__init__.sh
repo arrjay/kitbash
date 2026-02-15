@@ -33,12 +33,12 @@ case "`uname -s`" in
 esac
 
 # forward/backward compat shim
-declare -f system::service::enable  >/dev/null 2>&1 && system.service.enable()  { __kitbash_log "called legacy system.service.enable"  ; system::service::enable "${@}"  ; }
-declare -f system::service::disable >/dev/null 2>&1 && system.service.disable() { __kitbash_log "called legacy system.service.disable" ; system::service::disable "${@}" ; }
-declare -f system::service::started >/dev/null 2>&1 && system.service.started() { __kitbash_log "called legacy system.service.started" ; system::service::started "${@}" ; }
-declare -f system::service::stopped >/dev/null 2>&1 && system.service.stopped() { __kitbash_log "called legacy system.service.stopped" ; system::service::stopped "${@}" ; }
+__compat_shim "called legacy system.service.enable"  system.service.enable system::service::enable
+__compat_shim "called legacy system.service.disable" system.service.disable system::service::disable
+__compat_shim "called legacy system.service.started" system.service.started system::service::started
+__compat_shim "called legacy system.service.stopped" system.service.stopped system::service::stopped
 
-declare -f system::service::enable  >/dev/null 2>&1 || { declare -f system.service.enable  >/dev/null 2>&1 && system::service::enable()  { __kitbash_log "legacy system.service.enable provider in use"  ; system.service.enable "${@}"  ; } ; }
-declare -f system::service::disable >/dev/null 2>&1 || { declare -f system.service.disable >/dev/null 2>&1 && system::service::disable() { __kitbash_log "legacy system.service.disable provider in use" ; system.service.disable "${@}" ; } ; }
-declare -f system::service::started >/dev/null 2>&1 || { declare -f system.service.started >/dev/null 2>&1 && system::service::started() { __kitbash_log "legacy system.service.started provider in use" ; system.service.started "${@}" ; } ; }
-declare -f system::service::stopped >/dev/null 2>&1 || { declare -f system.service.stopped >/dev/null 2>&1 && system::service::stopped() { __kitbash_log "legacy system.service.stopped provider in use" ; system.service.stopped "${@}" ; } ; }
+__exists system::service::enable  || __compat_shim "legacy system.service.enable provider in use"  system::service::enable system.service.enable
+__exists system::service::disable || __compat_shim "legacy system.service.disable provider in use" system::service::disable system.service.disable
+__exists system::service::started || __compat_shim "legacy system.service.started provider in use" system::service::started system.service.started
+__exists system::service::stopped || __compat_shim "legacy system.service.stopped provider in use" system::service::stopped system.service.stopped

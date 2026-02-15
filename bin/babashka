@@ -62,19 +62,27 @@ __kitbash_log() {
     printf "%*s"  "$__kitbash_current_indent" 1>&2
     printf "%s\n" "$@" 1>&2
 }
-__babashka_log() {
-    __kitbash_log "called legacy __babashka_log"
-    __kitbash_log "$@"
+
+# here have some...meta
+function __exists () {
+  local function="${1}" ; shift
+  declare -f "${function}" > /dev/null 2>&1
 }
+
+function __compat_shim () {
+  local message="${1}"   ; shift
+  local shim_name="${1}" ; shift
+  local invokes="${1}"   ; shift
+  __exists "${invokes}" eval "function ${shim_name}() { __kitbash_log \"${message}\" ; \"${invokes}\" \"\${@}\" ; }"
+}
+
+__compat_shim "called legacy __babashka_log" __babashka_log __kitbash_log
 
 __kitbash_fail() {
     echo ERROR: "$@" 1>&2
     exit 1
 }
-__babashka_fail() {
-    __kitbash_log  "called legacy __babashka_fail"
-    __kitbash_fail "$@"
-}
+__compat_shim "called legacy __babashka_fail" __babashka_fail __kitbash_fail
 
 unmeetable() {
     __kitbash_fail "$@"
@@ -217,10 +225,9 @@ function __kitbash_load_deps_from_path() {
         source $path
     done
 }
-function __babashka_load_deps_from_path() {
-    __kitbash_log "using legacy __babashka_load_deps_from_path against $1"
-    __kitbash_load_deps_from_path "$1"
-}
+
+__compat_shim "called legacy __babahska_load_deps_from_path" __babashka_load_deps_from_path __kitbash_load_deps_from_path
+
 file_exists() {
     if [ "${1:0:7}" = "hdfs://" ]; then
         hadoop fs -test -e "$1"
