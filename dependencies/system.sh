@@ -3,7 +3,7 @@
 function system::group() {
   _group_name=$1; shift
 
-  __kitbash_log "== ${FUNCNAME[0]} $_group_name"
+  kb_log "== ${FUNCNAME[0]} $_group_name"
   while getopts "g:" opt; do
     case "$opt" in
       # echoing through xargs trims whitespace
@@ -67,7 +67,7 @@ function system::user() {
   # Reset the option parsing
   unset OPTIND
   unset OPTARG
-  __kitbash_log "== ${FUNCNAME[0]} $_user_name"
+  kb_log "== ${FUNCNAME[0]} $_user_name"
   if [[ is_system == true ]]; then
     unset $homedir
   fi
@@ -175,7 +175,7 @@ function system::user::groups() {
   # Reset the option parsing
   unset OPTIND
   unset OPTARG
-  __kitbash_log "== ${FUNCNAME[0]} $_user_name"
+  kb_log "== ${FUNCNAME[0]} $_user_name"
   getent passwd ${_user_name} > /dev/null || __kitbash_fail "${FUNCNAME[0]}: User $_user_name does not exist."
   
   for group in ${_groups[@]}; do
