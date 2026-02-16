@@ -27,13 +27,17 @@ function system::file() {
   done
   unset OPTIND
   unset OPTARG
-  __kitbash_log "== ${FUNCNAME[0]} ${_file_name}"
+  kb_log "== ${FUNCNAME[0]} ${_file_name}"
 
   # setting source *and* contents makes no sense. forbid.
   [[ "${_source}" && "${contents}" ]] && __kitbash_fail "cannot set source and contents for file realization"
   
   function get_id() {
-    echo "${_file_name}"
+    printf '%s\n' "${_file_name}"
+  }
+
+  function get_target() {
+    printf 'file:%s\n' "${_file_name}"
   }
 
   function is_met() {
