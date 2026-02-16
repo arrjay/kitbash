@@ -3,7 +3,7 @@
 __internal::system::service::preamble() {
   local _unit="${1}"     ; shift
   local _funcname="${1}" ; shift
-  __kitbash_log "== ${_funcname} (sysrc) ${_unit}"
+  kb_log "== ${_funcname} (sysrc) ${_unit}"
 
   # check if the unit even exists; if it doesn't this makes no sense
   local exists=0 ; local svc
@@ -61,6 +61,8 @@ system::service::disable() {
   function meet() {
     $__kitbash_sudo sysrc "${_unit}_enable="'""'
   }
+
+  process
 }
 
 system::service::started() {
@@ -80,6 +82,8 @@ system::service::started() {
   function meet() {
     service "${_unit}" status >/dev/null 2>&1 || $__kitbash_sudo service "${_unit}" onestart
   }
+
+  process
 }
 
 system::service::stopped() {
@@ -99,23 +103,14 @@ system::service::stopped() {
   function meet() {
     $__kitbash_sudo service "${_unit}" stop
   }
+
+  process
 }
 
-system::service::restart() {
-  _unit=$1 ; shift
+helper::system::service::restart() {
+  local _unit=$1 ; shift
 
   __internal::system::service::preamble "${_unit}" "${FUNCNAME[0]}"
 
-  function get_id() {
-    echo "${_unit}"
-  }
-
-  function is_met() {
-    service "${_unit}" onerestart >/dev/null 2>&1
-  }
-
-  # this is, definitionally, unmeetable?
-  function meet() {
-    return 0
-  }
+  service "${_unit}" onerestart >/dev/null 2>&1
 }
