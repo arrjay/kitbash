@@ -90,19 +90,34 @@ unmeetable() {
     __kitbash_fail "$@"
 }
 function process() {
+  local buf ; buf=""
   __process_is_met || {
     # Check if get_id is declared, so that we can log this in the
     # __kitbash_dirty array
+    fn_exists get_target && {
+      # get_target is a different take on get_id that requires more
+      # from the invoker...but allows for on_change to not target a
+      # specific meeting function. the intent is to reveal a more
+      # basic event like "file:/foo/bar"
+      buf="$(get_target)"
+      [[ "${buf}" ]] && {
+        # this is running in a subshell space, look at __kitbash_invoke
+        __kitbash_dirty["${buf}"]="1"
+        # tell the global kitbash what we touched, though
+        printf '%s\n' "${buf}" 1>&12
+      }
+    }
     fn_exists get_id && {
       # The function we're in defined a get_id feature, so we can mark this
       # as a dirtied element so that later things can trigger on it
       # if they like.
-      local __id="$(get_id)"
-      [[ "${__id}" ]] && {
+      # *this* variant encodes the emitter's name, though.
+      buf="$(get_id)"
+      [[ "${buf}" ]] && {
         # this is running in a subshell space, look at __kitbash_invoke
-        __kitbash_dirty["${FUNCNAME[1]}:${__id}"]="1"
+        __kitbash_dirty["${FUNCNAME[1]}:${buf}"]="1"
         # tell the global kitbash what we touched, though
-        printf '%s:%s\n' "${FUNCNAME[1]}" "${__id}" 1>&12
+        printf '%s:%s\n' "${FUNCNAME[1]}" "${buf}" 1>&12
       }
     }
     if [[ "$__kitbash_dry_run" == "no" ]]; then
@@ -114,7 +129,10 @@ function process() {
   }
   # If get_id exists we want to unset it so that we don't get
   # odd behaviours across invocations where it's not yet implemented.
-  fn_exists get_id && unset -f get_id
+  # this can also be running inside someone else's is_met set +e jail
+  # so we need to not error here.
+  { fn_exists get_id     && unset -f get_id ;         } || :
+  { fn_exists get_target && unset -f get_get_target ; } || :
 }
 
 function __process_is_met() {
@@ -156,10 +174,11 @@ function __kitbash_invoke() {
     # before we run, we're gonna stomp on file descriptors, sorry
     exec 3>&1 4>&2
     # surprise! the function we invoke lives in a subshell...
-    kb_id="$(eval "${1}" 1>&3 2>&4 12>&1)"
+    while IFS= read -r kb_id ; do
+      [[ "${kb_id}" ]] && __kitbash_dirty["${kb_id}"]=1
+    done < <(eval "${1}" 1>&3 2>&4 12>&1)
     # be kind, rewind
     exec 3>&- 4>&- 12>&-
-    [[ "${kb_id}" ]] && __kitbash_dirty["${kb_id}"]=1
 
     # that makes the return code 1 even if kitbash succeeds, because arithmetic
     # expressions behave differently than success/error of commands:
