@@ -90,36 +90,36 @@ unmeetable() {
     __kitbash_fail "$@"
 }
 function process() {
-    if ! __process_is_met; then
-        # Check if get_id is declared, so that we can log this in the 
-        # __kitbash_dirty array
-        if type get_id &> /dev/null; then
-            # The function we're in defined a get_id feature, so we can mark this
-            # as a dirtied element so that later things can trigger on it
-            # if they like.
-            local __id=$(get_id)
-            # this is running in a subshell space, look at __kitbash_invoke
-            __kitbash_dirty["${FUNCNAME[1]}:${__id}"]="1"
-            # tell the global kitbash what we touched, though
-            printf '%s:%s\n' "${FUNCNAME[1]}" "${__id}" 1>&12
-        fi
-        if [ "$__kitbash_dry_run" = "no" ]; then
-            __process_meet
-            __process_is_met || kb_fail "dependency didn't converge"
-        else
-            kb_log '  `- dry run, skipping...'
-        fi
+  __process_is_met || {
+    # Check if get_id is declared, so that we can log this in the
+    # __kitbash_dirty array
+    fn_exists get_id && {
+      # The function we're in defined a get_id feature, so we can mark this
+      # as a dirtied element so that later things can trigger on it
+      # if they like.
+      local __id="$(get_id)"
+      [[ "${__id}" ]] && {
+        # this is running in a subshell space, look at __kitbash_invoke
+        __kitbash_dirty["${FUNCNAME[1]}:${__id}"]="1"
+        # tell the global kitbash what we touched, though
+        printf '%s:%s\n' "${FUNCNAME[1]}" "${__id}" 1>&12
+      }
+    }
+    if [[ "$__kitbash_dry_run" == "no" ]]; then
+      __process_meet
+      __process_is_met || kb_fail "dependency didn't converge"
+    else
+      kb_log '  `- dry run, skipping...'
     fi
-    # If get_id exists we want to unset it so that we don't get
-    # odd behaviours across invocations where it's not yet implemented.
-    if type get_id &> /dev/null; then
-        unset -f get_id
-    fi
+  }
+  # If get_id exists we want to unset it so that we don't get
+  # odd behaviours across invocations where it's not yet implemented.
+  fn_exists get_id && unset -f get_id
 }
 
 function __process_is_met() {
     kb_log '`- is met?'
-    is_met > $__kitbash_output_stream
+    (set -e;is_met;) > $__kitbash_output_stream
     st=$?
     kb_log "  $st"
     return $st
@@ -152,7 +152,7 @@ function __requires_nested() {
 function __kitbash_invoke() {
     local kb_id
     (( __kitbash_current_indent = __kitbash_current_indent + 1 ))
-    __kitbash_log "-> $1"
+    kb_log "-> $1"
     # before we run, we're gonna stomp on file descriptors, sorry
     exec 3>&1 4>&2
     # surprise! the function we invoke lives in a subshell...
@@ -175,7 +175,7 @@ function __kitbash_load_deps() {
     # Include a system-level Babashka repository for common packages and stuff
     for path in babashka/ babashka/dependencies/ /etc/babashka/dependencies /etc/babashka/helpers ; do
         if [ -d $path ]; then
-            __kitbash_log "loaded legacy babashka repository $path"
+            kb_log "loaded legacy babashka repository $path"
             __kitbash_load_deps_from_path "$path"
         fi
     done
@@ -206,7 +206,7 @@ function __kitbash_find_deps_from_path() {
     # So we're looking for a special file, the "don't recurse" file, to keep
     # Kitbash from walking the whole tree to look for shell files to load.
     [[ -e "${path}/.kitbash_no_recurse" ]]  && recurse=no
-    [[ -e "${path}/.babashka_no_recurse" ]] && { __kitbash_log "using legacy .babashka_no_recurse marker at $1" ; recurse=no ; }
+    [[ -e "${path}/.babashka_no_recurse" ]] && { kb_log "using legacy .babashka_no_recurse marker at $1" ; recurse=no ; }
 
     # we're going to allow for finding 0 files, so we return success explicitly.
     if [[ "${recurse}" == "no" ]] ; then
