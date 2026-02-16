@@ -127,12 +127,9 @@ function process() {
       kb_log '  `- dry run, skipping...'
     fi
   }
-  # If get_id exists we want to unset it so that we don't get
-  # odd behaviours across invocations where it's not yet implemented.
-  # this can also be running inside someone else's is_met set +e jail
-  # so we need to not error here.
-  { fn_exists get_id     && unset -f get_id ;         } || :
-  { fn_exists get_target && unset -f get_get_target ; } || :
+  # always attempt to close fd 12 so we can continue...
+  exec 12>&-
+  return 0
 }
 
 function __process_is_met() {
@@ -151,11 +148,16 @@ function __process_meet() {
 }
 
 function on_change() {
-  [[ "${2}" ]] || kb_fail "on_change called against $1 missing second argument of what to do"
+  local trigger ; trigger="${1}" ; shift
+  local runcmd ;  runcmd="${1}"  ; shift
+  local st
+  [[ "${runcmd}" ]] || kb_fail "on_change called against $1 missing second argument of what to do"
   # If a specific thing got dirtied, then we can run on that.
   # but it's ok if we didn't run at all.
-  [[ -v __kitbash_dirty["$1"] ]] || return 0
-  "$2"
+  [[ -v __kitbash_dirty["${trigger}"] ]] || return 0
+  "${runcmd}" "${@}"
+  st=$?
+  return $st
 }
 
 ## Allow for functions to declare other functions as requirements
@@ -179,9 +181,9 @@ function __kitbash_invoke() {
     # surprise! the function we invoke lives in a subshell...
     while IFS= read -r kb_id ; do
       [[ "${kb_id}" ]] && __kitbash_dirty["${kb_id}"]=1
-    done < <(eval "${1}" 12>&1 1>&3 2>&4)
+    done < <(unset -f is_met ; unset -f meet ; unset -f get_id ; unset -f get_target ; eval "${1}" 12>&1 1>&3 2>&4)
     # be kind, rewind
-    exec 3>&- 4>&- 12>&-
+    exec 3>&- 4>&-
 
     # that makes the return code 1 even if kitbash succeeds, because arithmetic
     # expressions behave differently than success/error of commands:
