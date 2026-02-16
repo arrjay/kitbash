@@ -88,7 +88,7 @@ function system.debian.repo.custom() {
 
     # wait how did the variables make it into the function call
     # weeeeird
-    requires_nested __system.debian.repo.custom.worker
+    __requires_nested __system.debian.repo.custom.worker
 
     __babashka_log "${__funcname}: running apt update"
     DEBIAN_FRONTEND=noninteractive $__babashka_sudo apt-get -yqq update

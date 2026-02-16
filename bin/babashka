@@ -58,13 +58,13 @@ if [ $__kitbash_trace = "yes" ]; then
     set -x
 fi
 
-__kitbash_log() {
+kb_log() {
     printf "%*s"  "$__kitbash_current_indent" 1>&2
-    printf "%s\n" "$@" 1>&2
+    printf "%s\n" "${*}" 1>&2
 }
 
 # here have some...meta
-function __exists () {
+function fn_exists () {
   local function="${1}" ; shift
   declare -f "${function}" > /dev/null 2>&1
 }
@@ -73,22 +73,24 @@ function __compat_shim () {
   local message="${1}"   ; shift
   local shim_name="${1}" ; shift
   local invokes="${1}"   ; shift
-  __exists "${invokes}" eval "function ${shim_name}() { __kitbash_log \"${message}\" ; \"${invokes}\" \"\${@}\" ; }"
+  fn_exists "${invokes}" eval "function ${shim_name}() { kb_log \"${message}\" ; \"${invokes}\" \"\${@}\" ; }"
 }
 
-__compat_shim "called legacy __babashka_log" __babashka_log __kitbash_log
+__compat_shim "called legacy __babashka_log" __babashka_log kb_log
+__compat_shim "called legacy __kitbash_log" __kitbash_log kb_log
 
-__kitbash_fail() {
-    echo ERROR: "$@" 1>&2
+kb_fail() {
+    printf 'ERROR: %s\n' "${*}" 1>&2
     exit 1
 }
-__compat_shim "called legacy __babashka_fail" __babashka_fail __kitbash_fail
+__compat_shim "called legacy __babashka_fail" __babashka_fail kb_fail
+__compat_shim "called legacy __babashka_fail" __kitbash_fail kb_fail
 
 unmeetable() {
     __kitbash_fail "$@"
 }
 function process() {
-    if ! process_is_met; then
+    if ! __process_is_met; then
         # Check if get_id is declared, so that we can log this in the 
         # __kitbash_dirty array
         if type get_id &> /dev/null; then
@@ -99,10 +101,10 @@ function process() {
             __kitbash_dirty["${FUNCNAME[1]}:${__id}"]="1"
         fi
         if [ "$__kitbash_dry_run" = "no" ]; then
-            process_meet
-            process_is_met || __kitbash_fail "dependency didn't converge"
+            __process_meet
+            __process_is_met || kb_fail "dependency didn't converge"
         else
-            __kitbash_log '  `- dry run, skipping...'
+            kb_log '  `- dry run, skipping...'
         fi
     fi
     # If get_id exists we want to unset it so that we don't get
@@ -112,19 +114,19 @@ function process() {
     fi
 }
 
-function process_is_met() {
-    __kitbash_log '`- is met?'
+function __process_is_met() {
+    kb_log '`- is met?'
     is_met > $__kitbash_output_stream
     st=$?
-    __kitbash_log "  $st"
+    kb_log "  $st"
     return $st
 }
 
-function process_meet() {
-    __kitbash_log "=> meet "
+function __process_meet() {
+    kb_log "=> meet "
     meet > $__kitbash_output_stream
     st=$?
-    __kitbash_log "=> $st"
+    kb_log "=> $st"
 }
 
 function on_change() {
@@ -133,14 +135,13 @@ function on_change() {
 }
 
 ## Allow for functions to declare other functions as requirements
-
 function requires() {
     __kitbash_invoke "$1"
 }
 
 ### Need to spawn a subshell for this one.
-
-function requires_nested() {
+## TODO: why?
+function __requires_nested() {
     ( __kitbash_invoke "$1" ) || exit 1
 }
 
