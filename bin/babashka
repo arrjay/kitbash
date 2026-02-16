@@ -73,7 +73,7 @@ function __compat_shim () {
   local message="${1}"   ; shift
   local shim_name="${1}" ; shift
   local invokes="${1}"   ; shift
-  fn_exists "${invokes}" eval "function ${shim_name}() { kb_log \"${message}\" ; \"${invokes}\" \"\${@}\" ; }"
+  fn_exists "${invokes}" && eval "function ${shim_name}() { kb_log \"${message}\" ; \"${invokes}\" \"\${@}\" ; }"
 }
 
 __compat_shim "called legacy __babashka_log" __babashka_log kb_log

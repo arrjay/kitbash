@@ -39,5 +39,5 @@ __compat_shim "called legacy system.package" system.package system::package
 __compat_shim "called legacy system.package.absent" system.package.absent system::package::absent
 
 # handle . infix functions being the only ones that were loaded (forward-compat so new callers work)
-__exists system::package || __compat_shim "legacy system.package provider in use" system::package system.package
-__exists system::package::absent || __compat_shim "legacy system.package.absent provider in use" system::package::absent system.package.absent
+fn_exists system::package || __compat_shim "legacy system.package provider in use" system::package system.package
+fn_exists system::package::absent || __compat_shim "legacy system.package.absent provider in use" system::package::absent system.package.absent

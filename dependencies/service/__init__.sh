@@ -38,7 +38,7 @@ __compat_shim "called legacy system.service.disable" system.service.disable syst
 __compat_shim "called legacy system.service.started" system.service.started system::service::started
 __compat_shim "called legacy system.service.stopped" system.service.stopped system::service::stopped
 
-__exists system::service::enable  || __compat_shim "legacy system.service.enable provider in use"  system::service::enable system.service.enable
-__exists system::service::disable || __compat_shim "legacy system.service.disable provider in use" system::service::disable system.service.disable
-__exists system::service::started || __compat_shim "legacy system.service.started provider in use" system::service::started system.service.started
-__exists system::service::stopped || __compat_shim "legacy system.service.stopped provider in use" system::service::stopped system.service.stopped
+fn_exists system::service::enable  || __compat_shim "legacy system.service.enable provider in use"  system::service::enable system.service.enable
+fn_exists system::service::disable || __compat_shim "legacy system.service.disable provider in use" system::service::disable system.service.disable
+fn_exists system::service::started || __compat_shim "legacy system.service.started provider in use" system::service::started system.service.started
+fn_exists system::service::stopped || __compat_shim "legacy system.service.stopped provider in use" system::service::stopped system.service.stopped
