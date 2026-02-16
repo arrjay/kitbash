@@ -151,8 +151,11 @@ function __process_meet() {
 }
 
 function on_change() {
-    # If a specific thing got dirtied, then we can return true to that.
-    [[ -v __kitbash_dirty["$1"] ]]
+  [[ "${2}" ]] || kb_fail "on_change called against $1 missing second argument of what to do"
+  # If a specific thing got dirtied, then we can run on that.
+  # but it's ok if we didn't run at all.
+  [[ -v __kitbash_dirty["$1"] ]] || return 0
+  "$2"
 }
 
 ## Allow for functions to declare other functions as requirements
