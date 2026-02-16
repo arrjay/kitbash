@@ -98,7 +98,10 @@ function process() {
             # as a dirtied element so that later things can trigger on it
             # if they like.
             local __id=$(get_id)
+            # this is running in a subshell space, look at __kitbash_invoke
             __kitbash_dirty["${FUNCNAME[1]}:${__id}"]="1"
+            # tell the global kitbash what we touched, though
+            printf '%s:%s\n' "${FUNCNAME[1]}" "${__id}" 1>&12
         fi
         if [ "$__kitbash_dry_run" = "no" ]; then
             __process_meet
@@ -147,9 +150,16 @@ function __requires_nested() {
 
 # $1 - dep name to invoke
 function __kitbash_invoke() {
+    local kb_id
     (( __kitbash_current_indent = __kitbash_current_indent + 1 ))
     __kitbash_log "-> $1"
-    eval "$1"
+    # before we run, we're gonna stomp on file descriptors, sorry
+    exec 3>&1 4>&2
+    # surprise! the function we invoke lives in a subshell...
+    kb_id="$(eval "${1}" 1>&3 2>&4 12>&1)"
+    # be kind, rewind
+    exec 3>&- 4>&- 12>&-
+    [[ "${kb_id}" ]] && __kitbash_dirty["${kb_id}"]=1
 
     # that makes the return code 1 even if kitbash succeeds, because arithmetic
     # expressions behave differently than success/error of commands:
