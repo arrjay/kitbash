@@ -121,7 +121,7 @@ function process() {
       }
     }
     if [[ "$__kitbash_dry_run" == "no" ]]; then
-      __process_meet
+      { fn_exists meet && __process_meet ; } || :
       __process_is_met || kb_fail "dependency didn't converge"
     else
       kb_log '  `- dry run, skipping...'
