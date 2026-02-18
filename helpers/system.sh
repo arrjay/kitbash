@@ -27,7 +27,7 @@ fact::user::uid() {
       # Is a string, so we need to check if the group even exists
       # And if it doesn't, that's, well, bad? Yes, that's bad.
       _uid="$(getent passwd "${_user}")"
-      _uid="${_uid#*:*}"
+      _uid="${_uid#*:*:}"
       _uid="${_uid%%:*}"
       ;;
     *)
@@ -68,7 +68,7 @@ fact::group::gid() {
       # Is a string, so we need to check if the group even exists
       # And if it doesn't, that's, well, bad? Yes, that's bad.
       _gid="$(getent group "${_group_name}")"
-      _gid="${_gid#*:*}"
+      _gid="${_gid#*:*:}"
       _gid="${_gid%%:*}"
       ;;
     *)
@@ -87,9 +87,15 @@ __compat_shim "called legacy group.get_gid" group.get_gid fact::group::gid
 # and we've split some of the lift into the facts, which never existed before.
 fact::path::uid() {
   local _path="${1}"; shift
-  local buf
+  local buf sf
 
-  buf="$(stat -c '%u' "${_path}")"
+  # FreeBSD has no -c, it uses -f
+  case "$(fact::base::uname_s)" in
+    FreeBSD) sf='-f' ;;
+    *)       sf='-c' ;;
+  esac
+
+  buf="$(stat "${sf}" '%u' "${_path}")"
 
   [[ "${buf}" ]] || return 1
   printf '%s\n' "${buf}"
@@ -113,9 +119,15 @@ __compat_shim "called legacy path.has_uid" path.has_uid helper::path::owner
 
 fact::path::gid() {
   local _path="${1}" ; shift
-  local buf
+  local buf sf
 
-  buf="$(stat -c '%g' "${_path}")"
+  # FreeBSD has no -c, it uses -f
+  case "$(fact::base::uname_s)" in
+    FreeBSD) sf='-f' ;;
+    *)       sf='-c' ;;
+  esac
+
+  buf="$(stat "${sf}" '%g' "${_path}")"
 
   [[ "${buf}" ]] || return 1
   printf '%s\n' "${buf}"
@@ -138,8 +150,25 @@ __compat_shim "called legacy path.has_gid" path.has_gid helper::path::group
 fact::path::mode() {
   local _path="${1}" ; shift
   local buf
+  local -a flags
 
-  buf="$(stat -c '%s' "${_path}")"
+  # FreeBSD has no -c, it uses -f
+  # FreeBSD also uses %p to get the mode, _so_.
+  case "$(fact::base::uname_s)" in
+    FreeBSD) flags=('-f' '%p') ;;
+    *)       flags=('-c' '%s') ;;
+  esac
+
+  buf="$(stat "${flags[@]}" "${_path}")"
+
+  # FreeBSD also returns a five-digit mode??
+  # I am currently choosing to ignore it.
+  case "$(fact::base::uname_s)" in
+    FreeBSD) [[ "${#buf}" -eq 5 ]] && buf="${buf:1}" ;;
+  esac
+
+  # Strip the leading 0 for 4-octet modes, as it's implied
+  [[ "${#buf}" -eq 4 ]] && [[ "${buf:0:1}" == "0" ]] && buf="${buf:1}"
 
   [[ "${buf}" ]] || return 1
   printf '%s\n' "${buf}"
