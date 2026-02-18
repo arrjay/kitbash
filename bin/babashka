@@ -133,8 +133,6 @@ function process() {
       kb_log '  `- dry run, skipping...'
     fi
   }
-  # always attempt to close fd 12 so we can continue...
-  exec 12>&-
   return 0
 }
 
