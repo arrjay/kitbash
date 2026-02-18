@@ -58,6 +58,12 @@ if [ $__kitbash_trace = "yes" ]; then
     set -x
 fi
 
+# define facts _here_ to be run once, so that other layers can rely on them
+# this is done with eval so that it's...static in runtime
+uname_s="$(uname -s)"
+eval "function fact::base::uname_s () { printf '%s\n' "${uname -s}" ; }"
+unset uname_s
+
 kb_log() {
     printf "%*s"  "$__kitbash_current_indent" 1>&2
     printf "%s\n" "${*}" 1>&2

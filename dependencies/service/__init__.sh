@@ -1,6 +1,6 @@
 local ABSOLUTE_PATH="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-case "`uname -s`" in
+case "$(fact::base::uname_s)" in
   Linux)
     if [ -e /usr/bin/lsb_release ]; then
       # It's something that adheres to LSB!
