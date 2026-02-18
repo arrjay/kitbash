@@ -61,7 +61,7 @@ fi
 # define facts _here_ to be run once, so that other layers can rely on them
 # this is done with eval so that it's...static in runtime
 uname_s="$(uname -s)"
-eval "function fact::base::uname_s () { printf '%s\n' "${uname -s}" ; }"
+eval "function fact::base::uname_s () { printf '%s\n' "${uname_s}" ; }"
 unset uname_s
 
 kb_log() {
