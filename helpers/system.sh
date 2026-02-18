@@ -42,6 +42,20 @@ fact::user::uid() {
 
 __compat_shim "called legacy user.get_uid" user.get_uid fact::user::uid
 
+fact::user::homedir() {
+  local _user="${1}" ; shift
+  local buf
+
+  [[ "${_user}" ]] || return 1
+
+  # TODO: should we support getting a uid?
+  buf="$(getent passwd "${_user}")"
+  buf="${buf#*:*:*:*:*:}"
+  buf="${buf%%:*}"
+
+  printf '%s\n' "${buf}"
+}
+
 fact::group::gid() {
   local _group_name="${1}"; shift
   local _gid
