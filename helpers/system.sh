@@ -161,10 +161,10 @@ fact::path::mode() {
 
   buf="$(stat "${flags[@]}" "${_path}")"
 
-  # FreeBSD also returns a five-digit mode??
+  # FreeBSD also returns a five or SIX digit mode??
   # I am currently choosing to ignore it.
   case "$(fact::base::uname_s)" in
-    FreeBSD) [[ "${#buf}" -eq 5 ]] && buf="${buf:1}" ;;
+    FreeBSD) [[ "${#buf}" -gt 4 ]] && buf="${buf: -4}" ;;
   esac
 
   # Strip the leading 0 for 4-octet modes, as it's implied
