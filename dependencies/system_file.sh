@@ -67,14 +67,23 @@ function system::file() {
   }
 
   function meet() {
+    local -a install_flags ; install_flags=()
     [[ "${contents}" ]] && {
       echo "${contents}" | $__kitbash_sudo tee "${_file_name}" > /dev/null
     }
 
     [[ ${_source} ]] && {
-      $__kitbash_sudo cp "${_source}" "${_file_name}"
+      # so, we're actually going to prefer using the `install' command if we
+      # have a source. then we can set u/g/o/m as part of one operation.
+      # this is very hand if we're copying, say, a sudoers config.
+      [[ "${mode}"  ]] && install_flags+=('-m' "${mode}")
+      [[ "${owner}" ]] && install_flags+=('-o' "${owner}")
+      [[ "${group}" ]] && install_flags+=('-g' "${group}")
+      $__kitbash_sudo install "${install_flags[@]}" "${_source}" "${_file_name}"
     }
 
+    # it should be harmless to run these again on an installed file
+    # so this covers both cases.
     [[ "${mode}"  ]] && $__kitbash_sudo chmod "${mode}"  "${_file_name}"
     [[ "${owner}" ]] && $__kitbash_sudo chown "${owner}" "${_file_name}"
     [[ "${group}" ]] && $__kitbash_sudo chgrp "${group}" "${_file_name}"
