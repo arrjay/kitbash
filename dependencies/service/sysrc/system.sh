@@ -113,4 +113,7 @@ helper::system::service::restart() {
   __internal::system::service::preamble "${_unit}" "${FUNCNAME[0]}"
 
   service "${_unit}" onerestart >/dev/null 2>&1
+  st="${?}"
+
+  return "${st}"
 }
