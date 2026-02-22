@@ -133,6 +133,9 @@ function process() {
       kb_log '  `- dry run, skipping...'
     fi
   }
+  # clear get_target/get_id functions
+  fn_exists get_target && unset -f get_target
+  fn_exists get_id     && unset -f get_id
   return 0
 }
 
@@ -159,6 +162,7 @@ function on_change() {
   # If a specific thing got dirtied, then we can run on that.
   # but it's ok if we didn't run at all.
   [[ -v __kitbash_dirty["${trigger}"] ]] || return 0
+  printf '%s trigger called\n' "${trigger}"
   "${runcmd}" "${@}"
   st=$?
   return $st
