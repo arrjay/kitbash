@@ -38,7 +38,7 @@ system::service::enable() {
   }
 
   function meet() {
-    $__kitbash_sudo sysrc "${_unit}_enable="'"YES"'
+    $__kitbash_sudo sysrc "${_unit}_enable="'YES'
   }
 
   process
@@ -59,7 +59,7 @@ system::service::disable() {
   }
 
   function meet() {
-    $__kitbash_sudo sysrc "${_unit}_enable="'""'
+    $__kitbash_sudo sysrc "${_unit}_enable="''
   }
 
   process
