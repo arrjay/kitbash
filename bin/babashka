@@ -189,7 +189,7 @@ function __kitbash_invoke() {
     # surprise! the function we invoke lives in a subshell...
     while IFS= read -r kb_id ; do
       [[ "${kb_id}" ]] && __kitbash_dirty["${kb_id}"]=1
-    done < <(unset -f is_met ; unset -f meet ; unset -f get_id ; unset -f get_target ; eval "${1}" 12>&1 1>&3 2>&4)
+    done < <(unset -f is_met ; unset -f meet ; unset -f get_id ; unset -f get_target ; eval "${1}" 1>&3 2>&4 12>&1)
     # be kind, rewind
     exec 3>&- 4>&-
 
