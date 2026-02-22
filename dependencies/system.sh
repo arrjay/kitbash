@@ -141,7 +141,14 @@ function system::user() {
     # process user flags
     [[ "${_gid:-}"    ]] && cmds+=(-g "${_gid}")
     [[ "${uid:-}"     ]] && cmds+=(-u "${uid}")
-    [[ "${homedir:-}" ]] && cmds+=(-d "${homedir}" -m)
+    # only attempt to create the home directory if it doesn't exist
+    [[ "${homedir:-}" ]] && {
+      if [[ -d "${homedir}" ]] ; then
+       cmds+=(-d "${homedir}")
+      else
+       cmds+=(-d "${homedir}" -m)
+      fi
+    }
     [[ "${shell:-}"   ]] && cmds+=(-s "${shell}")
     # handle adding the username as a suffix here.
     case "${sys}" in
