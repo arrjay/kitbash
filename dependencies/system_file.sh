@@ -2,6 +2,8 @@
 # Manages a file on disk somewhere
 
 function system::file() {
+  local _file_name group owner mode _source contents opt OPTIND OPTARG
+  _file_name='' ; group='' ; owner='' ; mode='' ; _source='' ; contents=''
   _file_name="${1}" ; shift
   [[ "${_file_name}" ]] || __kitbash_fail "you must specify a file destination to manage"
   # g: gid or group name
