@@ -80,7 +80,7 @@ system::service::started() {
 
   # if the service is already running, don't _start_ it.
   function meet() {
-    service "${_unit}" status >/dev/null 2>&1 || $__kitbash_sudo service "${_unit}" onestart
+    $__kitbash_sudo service "${_unit}" status >/dev/null 2>&1 || $__kitbash_sudo service "${_unit}" onestart
   }
 
   process
@@ -107,12 +107,38 @@ system::service::stopped() {
   process
 }
 
+system::service::startflags() {
+  local _unit=$1  ; shift
+  local _flags=$2 ; shift
+
+  __internal::system::service::preamble "${_unit}" "${FUNCNAME[0]}"
+
+  function get_id() {
+    printf '%s\n' "${_unit}"
+  }
+
+  function get_target() {
+    printf 'service:%s\n' "${_unit}"
+  }
+
+  function is_met() {
+    local buf
+    buf="$(sysrc "${_unit}_flags")"
+    buf="${buf#"${_unit}_flags: "}"
+    [[ "${buf}" == "${_flags}" ]]
+  }
+
+  function meet() {
+    $__kitbash_sudo sysrc "${_unit}_flags="'"'"${_flags}"'"'
+  }
+}
+
 helper::system::service::restart() {
   local _unit=$1 ; shift
 
   __internal::system::service::preamble "${_unit}" "${FUNCNAME[0]}"
 
-  service "${_unit}" onerestart >/dev/null 2>&1
+  $__kitbash_sudo service "${_unit}" onerestart >/dev/null 2>&1
   st="${?}"
 
   return "${st}"
